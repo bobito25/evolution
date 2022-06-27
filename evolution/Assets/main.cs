@@ -79,6 +79,7 @@ public abstract class Entity
     public int id;
     public Net behaviour;
     public GameObject entityGameObject;
+    public int speed = 10;
     
     public Entity() {
         id = nextId++;
@@ -114,8 +115,8 @@ public class Creature1 : Entity
     }
 
     public override void move() {
-        entityGameObject.transform.Rotate(Random.Range(0,90),Random.Range(0,90),0); //eigentlich nicht y sondern z
-        entityGameObject.transform.Translate(entityGameObject.transform.forward);
+        entityGameObject.transform.Rotate(0,0,Random.value*2 *Random.Range(-1,2)); //eigentlich nicht y sondern z
+        entityGameObject.transform.Translate(new Vector3(0,0.005f*speed,0));
     }
 
     public override void checkBoundaries() {
@@ -123,13 +124,13 @@ public class Creature1 : Entity
         Vector3 p = new Vector3(entityGameObject.transform.position.x,entityGameObject.transform.position.y,0);
         if (!b.Contains(p)) {
             if (entityGameObject.transform.position.x > GlobalVars.backgroundWidth/20) {
-                entityGameObject.transform.position += new Vector3(-GlobalVars.backgroundWidth/20,0,0);
+                entityGameObject.transform.position += new Vector3(-GlobalVars.backgroundWidth/10,0,0);
             } else if (entityGameObject.transform.position.x < -GlobalVars.backgroundWidth/20) {
-                entityGameObject.transform.position += new Vector3(GlobalVars.backgroundWidth/20,0,0);
+                entityGameObject.transform.position += new Vector3(GlobalVars.backgroundWidth/10,0,0);
             } else if (entityGameObject.transform.position.y > GlobalVars.backgroundHeight/20) {
-                entityGameObject.transform.position += new Vector3(0,-GlobalVars.backgroundHeight/20,0);
+                entityGameObject.transform.position += new Vector3(0,-GlobalVars.backgroundHeight/10,0);
             } else if (entityGameObject.transform.position.y < -GlobalVars.backgroundHeight/20) { 
-                entityGameObject.transform.position += new Vector3(0,GlobalVars.backgroundHeight/20,0);
+                entityGameObject.transform.position += new Vector3(0,GlobalVars.backgroundHeight/10,0);
             }
             //entityGameObject.transform.position = new Vector3(0,0,0);
         }
