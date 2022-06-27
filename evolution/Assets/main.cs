@@ -139,5 +139,90 @@ public class Creature1 : Entity
 
 public class Net
 {
+    int totalLinks;
 
+    List<string> possibleInputs;
+    List<string> possibleHiddens;
+    List<string> possibleOutputs;
+
+    List<Node> input;
+    int inputNum;
+    List<Node> hidden;
+    int hiddenNum;
+    List<Node> output; //needed?
+    int outputNum;
+
+    public Net(int tL, int nH) {
+        possibleInputs = new List<string>{"constant","random","seeEntity"};
+        possibleHiddens = new List<string>();
+        for (int i = 0; i < nH; i++) {
+            possibleHiddens.Add("hidden");
+        }
+        possibleOutputs = new List<string>{"moveForward","rotateLeft","rotateRight"};
+
+        //choose links
+        for (int i = 0; i < tL; i++) {
+            
+        }
+    }
+
+    public Net(int iN, int hN, int oN) {
+        possibleInputs = new List<string>{"constant","random","seeEntity"};
+        possibleOutputs = new List<string>{"moveForward","rotateLeft","rotateRight"};
+        if (iN > possibleInputs.Count) iN = possibleInputs.Count;
+        if (oN > possibleOutputs.Count) oN = possibleOutputs.Count;
+        inputNum = iN;
+        hiddenNum = hN;
+        outputNum = oN;
+        //make nodes
+        for (int i = 0; i < iN; i++) {
+            int r = Random.Range(0,possibleInputs.Count);
+            string type = possibleInputs[r];
+            possibleInputs.RemoveAt(r);
+            input.Add(new Node(type));
+        }
+        for (int i = 0; i < hN; i++) {
+            string type = "hidden";
+            input.Add(new Node(type));
+        }
+        for (int i = 0; i < oN; i++) {
+            int r = Random.Range(0,possibleOutputs.Count);
+            string type = possibleOutputs[r];
+            possibleOutputs.RemoveAt(r);
+            input.Add(new Node(type));
+        }
+        //make links
+
+    }
+}
+
+public class Node
+{
+    float value;
+    string type;
+    List<Node> links;
+
+    public Node(string t, List<Node> l) {
+        setRandomValue();
+        type = t;
+        links = l;
+    }
+
+    public Node(string t) {
+        setRandomValue();
+        type = t;
+        links = new List<Node>();
+    }
+
+    public void setRandomValue() {
+        if (Random.value > 0.5) {
+            value = Random.value;
+        } else {
+            value = -Random.value;
+        }
+    }
+
+    public void addLink(Node n) {
+        links.Add(n);
+    }
 }
