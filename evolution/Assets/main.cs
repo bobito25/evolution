@@ -83,6 +83,7 @@ public abstract class Entity
     
     public Entity() {
         id = nextId++;
+        behaviour = new Net(5,1);
         if (!initialized) {
             makeEntity();
             initialized = !initialized;
@@ -115,7 +116,7 @@ public class Creature1 : Entity
     }
 
     public override void move() {
-        entityGameObject.transform.Rotate(0,0,Random.value*2 *Random.Range(-1,2)); //eigentlich nicht y sondern z
+        entityGameObject.transform.Rotate(0,0,Random.value*2 *Random.Range(-1,2));
         entityGameObject.transform.Translate(new Vector3(0,0.005f*speed,0));
     }
 
@@ -160,39 +161,50 @@ public class Net
         }
         possibleOutputs = new List<string>{"moveForward","rotateLeft","rotateRight"};
 
+        input = new List<Node>();
+        hidden = new List<Node>();
+        output = new List<Node>();
+
         //choose links
         for (int i = 0; i < tL; i++) {
-            
+            inputNum = possibleInputs.Count;
+            hiddenNum = possibleHiddens.Count;
+            outputNum = possibleOutputs.Count;
+            int possibleLinks = inputNum*(outputNum+hiddenNum)+(hiddenNum*outputNum);
+            if (tL > possibleLinks) Debug.Log("error: links per net higher than possible link amount (funct Net)"); 
+            int r = Random.Range(0,possibleLinks);
+            Debug.Log(r);
+            if (r < inputNum*outputNum) {
+                int r2 = r / inputNum;
+                Debug.Log(r2);
+                int r3 = r % inputNum;
+                Node n1 = new Node(possibleInputs[r2]);
+                input.Add(n1);
+                Node n2 = new Node(possibleOutputs[r3]);
+                output.Add(n2);
+                n1.addLink(n2);
+            } else if (r < inputNum*(outputNum+hiddenNum)) {
+                r = r-(inputNum*outputNum);
+                int r2 = r / inputNum;
+                Debug.Log(r2);
+                int r3 = r % inputNum;
+                Node n1 = new Node(possibleInputs[r2]);
+                input.Add(n1);
+                Node n2 = new Node(possibleHiddens[r3]);
+                hidden.Add(n2);
+                n1.addLink(n2);
+            } else {
+                r = r-inputNum*(outputNum+hiddenNum);
+                int r2 = r / hiddenNum;
+                Debug.Log(r2);
+                int r3 = r % hiddenNum;
+                Node n1 = new Node(possibleHiddens[r2]);
+                hidden.Add(n1);
+                Node n2 = new Node(possibleOutputs[r3]);
+                output.Add(n2);
+                n1.addLink(n2);
+            }
         }
-    }
-
-    public Net(int iN, int hN, int oN) {
-        possibleInputs = new List<string>{"constant","random","seeEntity"};
-        possibleOutputs = new List<string>{"moveForward","rotateLeft","rotateRight"};
-        if (iN > possibleInputs.Count) iN = possibleInputs.Count;
-        if (oN > possibleOutputs.Count) oN = possibleOutputs.Count;
-        inputNum = iN;
-        hiddenNum = hN;
-        outputNum = oN;
-        //make nodes
-        for (int i = 0; i < iN; i++) {
-            int r = Random.Range(0,possibleInputs.Count);
-            string type = possibleInputs[r];
-            possibleInputs.RemoveAt(r);
-            input.Add(new Node(type));
-        }
-        for (int i = 0; i < hN; i++) {
-            string type = "hidden";
-            input.Add(new Node(type));
-        }
-        for (int i = 0; i < oN; i++) {
-            int r = Random.Range(0,possibleOutputs.Count);
-            string type = possibleOutputs[r];
-            possibleOutputs.RemoveAt(r);
-            input.Add(new Node(type));
-        }
-        //make links
-
     }
 }
 
@@ -200,9 +212,9 @@ public class Node
 {
     float value;
     string type;
-    List<Node> links;
+    List<Link> links;
 
-    public Node(string t, List<Node> l) {
+    public Node(string t, List<Link> l) {
         setRandomValue();
         type = t;
         links = l;
@@ -211,7 +223,7 @@ public class Node
     public Node(string t) {
         setRandomValue();
         type = t;
-        links = new List<Node>();
+        links = new List<Link>();
     }
 
     public void setRandomValue() {
@@ -223,6 +235,23 @@ public class Node
     }
 
     public void addLink(Node n) {
-        links.Add(n);
+        links.Add(new Link(this,n));
+    }
+}
+
+public class Link
+{
+    public float weight;
+    public Node source;
+    public Node dest;
+
+    public Link(Node s, Node d) {
+        if (Random.value > 0.5) {
+            weight = Random.value*2;
+        } else {
+            weight = -Random.value*2;
+        }
+        source = s;
+        dest = d;
     }
 }
