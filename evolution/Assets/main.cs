@@ -140,74 +140,104 @@ public class Creature1 : Entity
 
 public class Net
 {
-    int totalLinks;
+    int linkNum;
+    int possibleLinks;
 
-    List<string> possibleInputs;
-    List<string> possibleHiddens;
-    List<string> possibleOutputs;
+    string[] possibleInputs;
+    string[] possibleHiddens;
+    string[] possibleOutputs;
 
-    List<Node> input;
+    bool[,] adj;
+
+    Node[] input;
     int inputNum;
-    List<Node> hidden;
+    Node[] hidden;
     int hiddenNum;
-    List<Node> output; //needed?
+    Node[] output;
     int outputNum;
 
+    bool first;
+
     public Net(int tL, int nH) {
-        possibleInputs = new List<string>{"constant","random","seeEntity"};
-        possibleHiddens = new List<string>();
+        linkNum = 0;
+        possibleInputs = new string[] {"constant","random","seeEntity"};
+        possibleHiddens = new string[nH];
         for (int i = 0; i < nH; i++) {
-            possibleHiddens.Add("hidden");
+            possibleHiddens[i] = "hidden";
         }
-        possibleOutputs = new List<string>{"moveForward","rotateLeft","rotateRight"};
+        possibleOutputs = new string[] {"moveForward","rotateLeft","rotateRight"};
+        
+        inputNum = possibleInputs.Length;
+        hiddenNum = possibleHiddens.Length;
+        outputNum = possibleOutputs.Length;
 
-        input = new List<Node>();
-        hidden = new List<Node>();
-        output = new List<Node>();
+        possibleLinks = inputNum*(outputNum+hiddenNum)+(hiddenNum*outputNum);
+        if (tL > possibleLinks) {
+            Debug.Log("error: links per net higher than possible link amount (funct Net)");
+        } 
 
-        int possibleLinks = inputNum*(outputNum+hiddenNum)+(hiddenNum*outputNum);
-        if (tL > possibleLinks) Debug.Log("error: links per net higher than possible link amount (funct Net)"); 
+        adj = new bool[possibleInputs.Length+possibleHiddens.Length,possibleOutputs.Length+possibleHiddens.Length];
 
-        //choose links
+        input = new Node[possibleInputs.Length];
+        hidden = new Node[possibleHiddens.Length];
+        output = new Node[possibleOutputs.Length];
+
         for (int i = 0; i < tL; i++) {
-            inputNum = possibleInputs.Count;
-            hiddenNum = possibleHiddens.Count;
-            outputNum = possibleOutputs.Count;
-            possibleLinks = inputNum*(outputNum+hiddenNum)+(hiddenNum*outputNum);
-            int r = Random.Range(0,possibleLinks);
-            if (r < inputNum*outputNum) {
-                int r2 = r / inputNum;
-                int r3 = r % inputNum;
+            addRandomLink();
+        }
+    }
+
+    public void addRandomLink() {
+        int r = Random.Range(0,possibleLinks);
+        if (r < inputNum*outputNum) {
+            int r2 = r / inputNum;
+            int r3 = r % inputNum;
+            if (adj[r3,r2]) return;
+            if (input[r3] == null) {
                 Node n1 = new Node(possibleInputs[r3]);
-                possibleInputs.RemoveAt(r3);
-                input.Add(n1);
-                Node n2 = new Node(possibleOutputs[r2]);
-                possibleOutputs.RemoveAt(r2);
-                output.Add(n2);
-                n1.addLink(n2);
-            } else if (r < inputNum*(outputNum+hiddenNum)) {
-                r = r-(inputNum*outputNum);
-                int r2 = r / inputNum;
-                int r3 = r % inputNum;
-                Node n1 = new Node(possibleInputs[r3]);
-                possibleInputs.RemoveAt(r3);
-                input.Add(n1);
-                Node n2 = new Node(possibleHiddens[r2]);
-                possibleHiddens.RemoveAt(r2);
-                hidden.Add(n2);
-                n1.addLink(n2);
-            } else {
-                r = r-(inputNum*(outputNum+hiddenNum));
-                int r2 = r / hiddenNum;
-                int r3 = r % hiddenNum;
-                Node n1 = new Node(possibleHiddens[r3]);
-                possibleHiddens.RemoveAt(r3);
-                hidden.Add(n1);
-                Node n2 = new Node(possibleOutputs[r2]);
-                possibleOutputs.RemoveAt(r2);
-                output.Add(n2);
-                n1.addLink(n2);
+                input[r3] = n1;
+                inputNodeBools[r3] = true;
             }
+            if (output[r2] == null) {
+                Node n2 = new Node(possibleOutputs[r2]);
+                output[r2] = n2;
+                outputNodeBools[r2] = true;
+            }
+            input[r3].addLink(hidden[r2]);
+            adj[r3,r2] = true;
+            linkNum++;
+        } else if (r < inputNum*(outputNum+hiddenNum)) {
+            r = r-(inputNum*outputNum);
+            int r2 = r / inputNum;
+            int r3 = r % inputNum;
+            if (adj[r3,r2]) return;
+            if (input[r3] == null) {
+                Node n1 = new Node(possibleInputs[r3]);
+                input[r3] = n1;
+            }
+            if (hidden[r2] == null) {
+                Node n2 = new Node(possibleHiddens[r2]);
+                hidden[r2] = n1;
+            }
+            input[r3].addLink(hidden[r2]);
+            adj[r3,r2] = true;
+            linkNum++;
+        } else {
+            r = r-(inputNum*(outputNum+hiddenNum));
+            int r2 = r / hiddenNum;
+            int r3 = r % hiddenNum;
+            if (adj[r3,r2]) return;
+            if (hidden[r3] == null) {
+                Node n1 = new Node(possibleHiddens[r3]);
+                hidden[r3] = n1;
+            }
+            if (output[r2] == null) {
+                Node n2 = new Node(possibleOutputs[r2]);
+                output[r2] = n2;
+            }
+            hidden[r3].addLink(output[r2]);
+            adj[r3,r2] = true;
+            linkNum++;
         }
     }
 }
