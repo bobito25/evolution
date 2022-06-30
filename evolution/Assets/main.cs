@@ -11,10 +11,14 @@ public static class GlobalVars
 public class main : MonoBehaviour
 {
     List<Entity> entities;
+    int numEntities;
+
+    public int time;
 
     void Awake()
     {
         makeBackground();
+        time = 0;
     }
 
     // Start is called before the first frame update
@@ -32,12 +36,18 @@ public class main : MonoBehaviour
     void FixedUpdate()
     {
         moveEntities();
+        if (time % 10 == 0) {
+            mutate();
+        }
+        time++;
     }
 
     void spawnEntities() {
         entities = new List<Entity>();
+        numEntities = 0;
         Creature1 c1 = new Creature1();
         entities.Add(c1);
+        numEntities = 1;
     }
 
     void makeBackground() {
@@ -56,7 +66,7 @@ public class main : MonoBehaviour
     }
 
     void moveEntities() {
-        if (entities.Count == 0) {
+        if (numEntities == 0) {
             return;
         }
         foreach(Entity e in entities) {
@@ -65,6 +75,11 @@ public class main : MonoBehaviour
         foreach(Entity e in entities) {
             e.checkBoundaries();
         }
+    }
+
+    void mutate() {
+        int r = Random.Range(0,numEntities);
+        entities[r].mutate();
     }
 }
 
@@ -94,6 +109,7 @@ public abstract class Entity
     public abstract void move();
     public abstract void checkBoundaries();
     public abstract void makeEntity();
+    public abstract void mutate();
 }
 
 public class Creature1 : Entity
@@ -133,8 +149,11 @@ public class Creature1 : Entity
             } else if (entityGameObject.transform.position.y < -GlobalVars.backgroundHeight/20) { 
                 entityGameObject.transform.position += new Vector3(0,GlobalVars.backgroundHeight/10,0);
             }
-            //entityGameObject.transform.position = new Vector3(0,0,0);
         }
+    }
+
+    public override void mutate() {
+        behaviour.mutate();
     }
 }
 
@@ -149,6 +168,8 @@ public class Net
 
     bool[,] adj;
 
+    List<Link> links;
+
     Node[] input;
     int inputNum;
     Node[] hidden;
@@ -158,8 +179,9 @@ public class Net
 
     bool first;
 
-    public Net(int tL, int nH) {
+    public Net(int tL, int nH) { //max links and num hidden
         linkNum = 0;
+        links = new List<Link>();
         possibleInputs = new string[] {"constant","random","seeEntity"};
         possibleHiddens = new string[nH];
         for (int i = 0; i < nH; i++) {
@@ -194,51 +216,132 @@ public class Net
             int r3 = r % inputNum;
             if (adj[r3,r2]) return;
             if (input[r3] == null) {
-                Node n1 = new Node(possibleInputs[r3]);
+                Node n1 = new Node(possibleInputs[r3],r3,r3);
                 input[r3] = n1;
-                inputNodeBools[r3] = true;
             }
             if (output[r2] == null) {
-                Node n2 = new Node(possibleOutputs[r2]);
+                Node n2 = new Node(possibleOutputs[r2],r2,r2);
                 output[r2] = n2;
-                outputNodeBools[r2] = true;
             }
-            input[r3].addLink(hidden[r2]);
+            Link l = input[r3].addLink(output[r2]);
+            links.Add(l);
             adj[r3,r2] = true;
             linkNum++;
         } else if (r < inputNum*(outputNum+hiddenNum)) {
             r = r-(inputNum*outputNum);
             int r2 = r / inputNum;
             int r3 = r % inputNum;
-            if (adj[r3,r2]) return;
+            int i2 = outputNum + r2;
+            int i3 = r3;
+            if (adj[i3,i2]) return;
             if (input[r3] == null) {
-                Node n1 = new Node(possibleInputs[r3]);
+                Node n1 = new Node(possibleInputs[r3],i3,r3);
                 input[r3] = n1;
             }
             if (hidden[r2] == null) {
-                Node n2 = new Node(possibleHiddens[r2]);
-                hidden[r2] = n1;
+                Node n2 = new Node(possibleHiddens[r2],i2,r2);
+                hidden[r2] = n2;
             }
-            input[r3].addLink(hidden[r2]);
-            adj[r3,r2] = true;
+            Link l = input[r3].addLink(hidden[r2]);
+            links.Add(l);
+            adj[i3,i2] = true;
             linkNum++;
         } else {
             r = r-(inputNum*(outputNum+hiddenNum));
             int r2 = r / hiddenNum;
             int r3 = r % hiddenNum;
-            if (adj[r3,r2]) return;
+            int i2 = r2;
+            int i3 = inputNum + r3;
+            if (adj[i3,i2]) return;
             if (hidden[r3] == null) {
-                Node n1 = new Node(possibleHiddens[r3]);
+                Node n1 = new Node(possibleHiddens[r3],i3,r3);
                 hidden[r3] = n1;
             }
             if (output[r2] == null) {
-                Node n2 = new Node(possibleOutputs[r2]);
+                Node n2 = new Node(possibleOutputs[r2],i2,r2);
                 output[r2] = n2;
             }
-            hidden[r3].addLink(output[r2]);
-            adj[r3,r2] = true;
+            Link l = hidden[r3].addLink(output[r2]);
+            links.Add(l);
+            adj[i3,i2] = true;
             linkNum++;
         }
+    }
+
+    public void mutate() {
+        if (Random.value > 0.2 && linkNum != 0) {
+            mutateWeight();
+        } else {
+            mutateLink();
+        }
+    }
+
+    public void mutateWeight() {
+        int r = Random.Range(0,linkNum);
+        Link w = links[r];
+        w.mutateWeight();
+    }
+
+    public void mutateLink() {
+        if (Random.value > 0.3) {
+            addRandomLink();
+        } else {
+            removeRandomLink();
+        }
+    }
+
+    public void removeRandomLink() {
+        int r = Random.Range(0,linkNum);
+        Link w = links[r];
+        w.source.links.Remove(w);
+        adj[w.source.index,w.dest.index] = false;
+        cleanS(w.source);
+        cleanD(w.dest);
+        links.Remove(w);
+        linkNum--;
+    }
+
+    public void cleanS(Node n) {
+        if (n.index < inputNum) {
+            if (!(n.links.Count == 0)) {
+                input[n.index2] = null;
+            }
+        } else {
+            if (!checkHiddenNodeLinked(n.index)) {
+                hidden[n.index2] = null;
+            }
+        }
+    }
+
+    public void cleanD(Node n) {
+        if (n.index < outputNum) {
+            if (!checkOutputNodeLinked(n.index)) {
+                output[n.index2] = null;
+            }
+        } else {
+            if (!checkHiddenNodeLinked(n.index)) {
+                hidden[n.index2] = null;
+            }
+        }
+    }
+
+    public bool checkHiddenNodeLinked(int index) {
+        bool r = false;
+        for (int i = 0; i < inputNum; i++) {
+            if (adj[i,index]) r = true;
+        }
+        for (int i = 0; i < outputNum; i++) {
+            if (adj[index,i]) r = true;
+        }
+        return r;
+    }
+
+    public bool checkOutputNodeLinked(int index) {
+        bool r = false;
+        for (int i = 0; i < outputNum+hiddenNum; i++) {
+            if (adj[index,i]) r = true;
+        }
+        return r;
     }
 }
 
@@ -246,7 +349,9 @@ public class Node
 {
     float value;
     string type;
-    List<Link> links;
+    public List<Link> links;
+    public int index; //adj
+    public int index2; //bool array
 
     public Node(string t, List<Link> l) {
         setRandomValue();
@@ -260,6 +365,14 @@ public class Node
         links = new List<Link>();
     }
 
+    public Node(string t, int i1, int i2) {
+        setRandomValue();
+        type = t;
+        index = i1;
+        index2 = i2;
+        links = new List<Link>();
+    }
+
     public void setRandomValue() {
         if (Random.value > 0.5) {
             value = Random.value;
@@ -268,8 +381,10 @@ public class Node
         }
     }
 
-    public void addLink(Node n) {
-        links.Add(new Link(this,n));
+    public Link addLink(Node n) {
+        Link r = new Link(this,n);
+        links.Add(r);
+        return r;
     }
 }
 
@@ -280,12 +395,13 @@ public class Link
     public Node dest;
 
     public Link(Node s, Node d) {
-        if (Random.value > 0.5) {
-            weight = Random.value*2;
-        } else {
-            weight = -Random.value*2;
-        }
+        weight = Random.Range(-2,2);
         source = s;
         dest = d;
+    }
+
+    public void mutateWeight() {
+        float m = Random.Range(-1,1);
+        weight += m;
     }
 }
