@@ -1,3 +1,4 @@
+using static System.Array;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,19 +13,24 @@ public class main : MonoBehaviour
 {
     List<Entity> entities;
     int numEntities;
+    int maxEntities;
 
     public int time;
+    public bool run;
 
     void Awake()
     {
+        time = 1;
+        run = false;
+        maxEntities = 50;
         makeBackground();
-        time = 0;
     }
 
     // Start is called before the first frame update
     void Start()
     {
         spawnEntities();
+        run = true;
     }
 
     // Update is called once per frame
@@ -35,18 +41,26 @@ public class main : MonoBehaviour
 
     void FixedUpdate()
     {
-        doBehaviour();
-        if (time % 10 == 0) {
-            mutate();
+        if (run) {
+            doBehaviour();
+            if (time % 20 == 0) {
+                mutate();
+            }
+            if (time % 1000 == 0) {
+                nextGen();
+            }
+            checkAllDead();
+            time++;
         }
-        time++;
     }
 
     void spawnEntities() {
         entities = new List<Entity>();
         numEntities = 0;
-        for (int i = 0; i < 5; i++) {
-            entities.Add(new Creature1());
+        for (int i = 0; i < maxEntities; i++) {
+            Entity e = new Creature1();
+            entities.Add(e);
+            e.setRandPos();
             numEntities++;
         }
     }
@@ -92,8 +106,51 @@ public class main : MonoBehaviour
     }
 
     void mutate() {
+        if (numEntities == 0) return;
         int r = Random.Range(0,numEntities);
         entities[r].mutate();
+    }
+
+    void nextGen() {
+        deleteTouching();
+        multiply();
+    }
+
+    void deleteTouching() {
+        List<Entity> toDie = new List<Entity>();
+        foreach(Entity e in entities) {
+            if (e.isTouching()) toDie.Add(e);
+        }
+        foreach(Entity e in toDie) {
+            //Debug.Log("killing " + e.id);
+            kill(e);
+        }
+    }
+
+    void checkAllDead() {
+        if (numEntities == 0) {
+            Debug.Log("all entities are dead, time: " + time);
+            run = false;
+        }
+    }
+
+    void multiply() {
+        if (numEntities == 0) return;
+        while (numEntities < maxEntities) {
+            int r = Random.Range(0,numEntities);
+            Entity e = entities[r];
+            Entity newE = new Creature1();
+            newE.behaviour = e.behaviour.clone();
+            entities.Add(newE);
+            newE.setRandPos();
+            numEntities++;
+        }
+    }
+
+    void kill(Entity e) {
+        Destroy(e.entityGameObject);
+        entities.Remove(e);
+        numEntities--;
     }
 }
 
@@ -121,6 +178,18 @@ public abstract class Entity
         }
         entityGameObject = Object.Instantiate(firstGameobject,new Vector3(0, 0, 0), Quaternion.identity);
         entityGameObject.SetActive(true);
+    }
+
+    public bool isTouching() {
+        Collider2D collider = entityGameObject.GetComponent<Collider2D>();
+        if (collider == null) Debug.Log("collider is null (funct isTouching)");
+        Collider2D[] r = new Collider2D[1];
+        ContactFilter2D cf = new ContactFilter2D();
+        return !(collider.OverlapCollider(cf.NoFilter(), r) == 0);
+    }
+
+    public void setRandPos() {
+        entityGameObject.transform.position = new Vector3(Random.Range(-GlobalVars.backgroundWidth/2,GlobalVars.backgroundWidth/2),Random.Range(-GlobalVars.backgroundHeight/2,GlobalVars.backgroundHeight/2),0);
     }
 
     public abstract void setInput();
@@ -210,22 +279,20 @@ public class Net
     int linkNum;
     int possibleLinks;
 
-    string[] possibleInputs;
-    string[] possibleHiddens;
-    string[] possibleOutputs;
+    static string[] possibleInputs;
+    static int inputNum;
+    static string[] possibleHiddens;
+    static int hiddenNum;
+    static string[] possibleOutputs;
+    static int outputNum;
 
     bool[,] adj;
 
     List<Link> links;
 
     Node[] input;
-    int inputNum;
     Node[] hidden;
-    int hiddenNum;
     Node[] output;
-    int outputNum;
-
-    bool first;
 
     public Net(int tL, int nH) { //max links and num hidden
         linkNum = 0;
@@ -255,6 +322,20 @@ public class Net
         for (int i = 0; i < tL; i++) {
             addRandomLink();
         }
+    }
+
+    public Net clone() {
+        Net r = (Net)(this.MemberwiseClone());
+        List<Link> newLinks = new List<Link>();
+        foreach (Link l in links) {
+            newLinks.Add(l);
+        }
+        r.links = newLinks;
+        Copy(input,r.input,inputNum);
+        Copy(hidden,r.hidden,hiddenNum);
+        Copy(output,r.output,outputNum);
+        Copy(adj,r.adj,(inputNum+hiddenNum)*(outputNum+hiddenNum));
+        return r;
     }
 
     public void setInput(bool seeEntity) {
