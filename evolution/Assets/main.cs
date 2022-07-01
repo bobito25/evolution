@@ -69,7 +69,6 @@ public class main : MonoBehaviour
     void doBehaviour() {
         setInputs();
         calcBehaviours();
-        setBehaviours();
         moveEntities();
     }
 
@@ -80,18 +79,14 @@ public class main : MonoBehaviour
     }
 
     void calcBehaviours() {
-
-    }
-
-    void setBehaviours() {
-
+        foreach(Entity e in entities) {
+            e.calcBehaviour();
+        }
     }
 
     void moveEntities() {
         foreach(Entity e in entities) {
             e.move();
-        }
-        foreach(Entity e in entities) {
             e.checkBoundaries();
         }
     }
@@ -115,8 +110,7 @@ public abstract class Entity
     public GameObject entityGameObject;
     public int speed = 10;
 
-    public Vector3 nextMove;
-    public Vector3 nextRotate;
+    public Actions nextAction;
     
     public Entity() {
         id = nextId++;
@@ -130,6 +124,7 @@ public abstract class Entity
     }
 
     public abstract void setInput();
+    public abstract void calcBehaviour();
     public abstract void move();
     public abstract void checkBoundaries();
     public abstract void makeEntity();
@@ -164,15 +159,19 @@ public class Creature1 : Entity
     public bool checkSeeEntity() {
         Vector3 fwd = entityGameObject.transform.up;
         Vector3 origin = entityGameObject.transform.position+(entityGameObject.transform.up/2);
-        Debug.DrawRay(origin, fwd*3, Color.yellow);
+        //Debug.DrawRay(origin, fwd*3, Color.yellow);
         RaycastHit2D hit = Physics2D.Raycast(origin, fwd, 3);
-        if (hit.collider != null) Debug.Log(hit.distance);
+        //if (hit.collider != null) Debug.Log(hit.distance);
         return hit.collider != null;
     }
 
+    public override void calcBehaviour() {
+        nextAction = behaviour.calcOutput();
+    }
+
     public override void move() {
-        entityGameObject.transform.Rotate(0,0,Random.value*2 *Random.Range(-1,2));
-        entityGameObject.transform.Translate(new Vector3(0,0.005f*speed,0));
+        entityGameObject.transform.Rotate(nextAction.rotation);
+        entityGameObject.transform.Translate(new Vector3(0,0.01f*nextAction.forwardM,0));
     }
 
     public override void checkBoundaries() {
@@ -193,6 +192,16 @@ public class Creature1 : Entity
 
     public override void mutate() {
         behaviour.mutate();
+    }
+}
+
+public struct Actions {
+    public float forwardM;
+    public Vector3 rotation;
+
+    public Actions(float m, Vector3 r) {
+        forwardM = m;
+        rotation = r;
     }
 }
 
@@ -258,6 +267,37 @@ public class Net
             } else {
                 input[2].value = 0;
             }
+        }
+    }
+
+    public Actions calcOutput() {
+        initNet();
+        for (int i = 0; i < inputNum; i++) {
+            if (input[i] != null) input[i].calc();
+        }
+        for (int i = 0; i < hiddenNum; i++) {
+            if (hidden[i] != null) hidden[i].calc();
+        }
+        float[] o = new float[outputNum];
+        for (int i = 0; i < outputNum; i++) {
+            if (output[i] != null) {
+                o[i] = output[i].value;
+            } else {
+                o[i] = 0;
+            }
+        }
+        float m = o[0];
+        Vector3 rL = new Vector3(0,0,o[1]);
+        Vector3 rR = new Vector3(0,0,o[2]);
+        return new Actions(m,rL-rR);
+    }
+
+    public void initNet() {
+        for (int i = 0; i < hiddenNum; i++) {
+            if (hidden[i] != null) hidden[i].value = 0;
+        }
+        for (int i = 0; i < outputNum; i++) {
+            if (output[i] != null) output[i].value = 0;
         }
     }
 
@@ -335,10 +375,10 @@ public class Net
     }
 
     public void mutateLink() {
-        if (Random.value > 0.3) {
-            addRandomLink();
-        } else {
+        if (Random.value > 0.7 && linkNum != 0) {
             removeRandomLink();
+        } else {
+            addRandomLink();
         }
     }
 
@@ -406,23 +446,41 @@ public class Node
     public int index2; //bool array
 
     public Node(string t, List<Link> l) {
-        setRandomValue();
+        if (t == "constant") {
+            value = 1;
+        } else {
+            value = 0;
+        }
         type = t;
         links = l;
     }
 
     public Node(string t) {
-        setRandomValue();
+        if (t == "constant") {
+            value = 1;
+        } else {
+            value = 0;
+        }
         type = t;
         links = new List<Link>();
     }
 
     public Node(string t, int i1, int i2) {
-        setRandomValue();
+        if (t == "constant") {
+            value = 1;
+        } else {
+            value = 0;
+        }
         type = t;
         index = i1;
         index2 = i2;
         links = new List<Link>();
+    }
+
+    public void calc() {
+        foreach (Link l in links) {
+            l.dest.value += value * l.weight;
+        }
     }
 
     public void setRandomValue() {
