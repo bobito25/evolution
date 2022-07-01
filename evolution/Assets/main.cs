@@ -35,7 +35,7 @@ public class main : MonoBehaviour
 
     void FixedUpdate()
     {
-        moveEntities();
+        doBehaviour();
         if (time % 10 == 0) {
             mutate();
         }
@@ -45,9 +45,10 @@ public class main : MonoBehaviour
     void spawnEntities() {
         entities = new List<Entity>();
         numEntities = 0;
-        Creature1 c1 = new Creature1();
-        entities.Add(c1);
-        numEntities = 1;
+        for (int i = 0; i < 5; i++) {
+            entities.Add(new Creature1());
+            numEntities++;
+        }
     }
 
     void makeBackground() {
@@ -65,10 +66,28 @@ public class main : MonoBehaviour
         sr.sprite = backgroundSprite;
     }
 
-    void moveEntities() {
-        if (numEntities == 0) {
-            return;
+    void doBehaviour() {
+        setInputs();
+        calcBehaviours();
+        setBehaviours();
+        moveEntities();
+    }
+
+    void setInputs() {
+        foreach(Entity e in entities) {
+            e.setInput();
         }
+    }
+
+    void calcBehaviours() {
+
+    }
+
+    void setBehaviours() {
+
+    }
+
+    void moveEntities() {
         foreach(Entity e in entities) {
             e.move();
         }
@@ -95,6 +114,9 @@ public abstract class Entity
     public Net behaviour;
     public GameObject entityGameObject;
     public int speed = 10;
+
+    public Vector3 nextMove;
+    public Vector3 nextRotate;
     
     public Entity() {
         id = nextId++;
@@ -104,8 +126,10 @@ public abstract class Entity
             initialized = !initialized;
         }
         entityGameObject = Object.Instantiate(firstGameobject,new Vector3(0, 0, 0), Quaternion.identity);
+        entityGameObject.SetActive(true);
     }
 
+    public abstract void setInput();
     public abstract void move();
     public abstract void checkBoundaries();
     public abstract void makeEntity();
@@ -125,10 +149,25 @@ public class Creature1 : Entity
         tex.Apply();
         Sprite creature1Sprite = Sprite.Create(tex, new Rect(0,0,tex.width,tex.height),new Vector2(0.5f, 0.5f),20);
         firstGameobject = new GameObject();
+        firstGameobject.SetActive(false);
         firstGameobject.name = "creature1";
         SpriteRenderer sr = firstGameobject.AddComponent<SpriteRenderer>() as SpriteRenderer;
         sr.sortingOrder = 1;
         sr.sprite = creature1Sprite;
+        BoxCollider2D collider = firstGameobject.AddComponent<BoxCollider2D>() as BoxCollider2D;
+    }
+
+    public override void setInput() {
+        behaviour.setInput(checkSeeEntity());
+    }
+
+    public bool checkSeeEntity() {
+        Vector3 fwd = entityGameObject.transform.up;
+        Vector3 origin = entityGameObject.transform.position+(entityGameObject.transform.up/2);
+        Debug.DrawRay(origin, fwd*3, Color.yellow);
+        RaycastHit2D hit = Physics2D.Raycast(origin, fwd, 3);
+        if (hit.collider != null) Debug.Log(hit.distance);
+        return hit.collider != null;
     }
 
     public override void move() {
@@ -206,6 +245,19 @@ public class Net
 
         for (int i = 0; i < tL; i++) {
             addRandomLink();
+        }
+    }
+
+    public void setInput(bool seeEntity) {
+        if (input[1] != null) {
+            input[1].setRandomValue();
+        }
+        if (input[2] != null) {
+            if (seeEntity) {
+                input[2].value = 1;
+            } else {
+                input[2].value = 0;
+            }
         }
     }
 
@@ -347,8 +399,8 @@ public class Net
 
 public class Node
 {
-    float value;
-    string type;
+    public float value;
+    public string type;
     public List<Link> links;
     public int index; //adj
     public int index2; //bool array
