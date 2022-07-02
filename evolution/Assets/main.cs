@@ -4,11 +4,22 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TODOS
 
-// change rotation to match euler angles
+// TODOs:
 
-// set min and max for behaviour net outputs
+//  change rotation to match euler angles
+
+//  set min and max for behaviour net outputs
+
+//  implement way to see bahaviour nets while running / clickable nodes
+
+//  change evo pressure: add food, hunger, seeFood input
+
+//  change weights to be less random values? -> example: only mutiples of 0.5 between -2 and 2
+
+//  gamespeed slider
+
+//  fix camera (dynammically)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
