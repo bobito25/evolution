@@ -1,4 +1,5 @@
 using static System.Array;
+using static System.Math;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,11 +8,9 @@ using UnityEngine;
 
 // TODOs:
 
-//  change rotation to match euler angles
-
-//  set min and max for behaviour net outputs
-
 //  implement way to see bahaviour nets while running / clickable nodes
+
+// make game states saveable
 
 //  change evo pressure: add food, hunger, seeFood input
 
@@ -56,7 +55,14 @@ public class main : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if (Input.GetMouseButtonDown(0)) {
+            RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), new Vector3(0,0,-1), 2);
+            if (hit.collider != null)
+            {
+                Entity e = entities.Find(x => x.entityGameObject == hit.collider.gameObject);
+                e.showBehaviourNet();
+            }
+        }
     }
 
     void FixedUpdate()
@@ -212,6 +218,7 @@ public abstract class Entity
         entityGameObject.transform.position = new Vector3(Random.Range(-GlobalVars.backgroundWidth/2,GlobalVars.backgroundWidth/2),Random.Range(-GlobalVars.backgroundHeight/2,GlobalVars.backgroundHeight/2),0);
     }
 
+    public abstract void showBehaviourNet();
     public abstract void setInput();
     public abstract void calcBehaviour();
     public abstract void move();
@@ -259,7 +266,7 @@ public class Creature1 : Entity
     }
 
     public override void move() {
-        entityGameObject.transform.Rotate(nextAction.rotation);
+        entityGameObject.transform.Rotate(new Vector3(0,0,nextAction.rotation));
         entityGameObject.transform.Translate(new Vector3(0,0.01f*nextAction.forwardM,0));
     }
 
@@ -282,13 +289,17 @@ public class Creature1 : Entity
     public override void mutate() {
         behaviour.mutate();
     }
+
+    public override void showBehaviourNet() {
+        behaviour.show();
+    }
 }
 
 public struct Actions {
     public float forwardM;
-    public Vector3 rotation;
+    public float rotation;
 
-    public Actions(float m, Vector3 r) {
+    public Actions(float m, float r) {
         forwardM = m;
         rotation = r;
     }
@@ -307,6 +318,9 @@ public class Net
     static int hiddenNum;
     static string[] possibleOutputs;
     static int outputNum;
+
+    static float maxSpeed = 10;
+    static float maxRotation = 11f/7f;
 
     bool[,] adj;
 
@@ -336,14 +350,21 @@ public class Net
             Debug.Log("error: links per net higher than possible link amount (funct Net)");
         } 
 
-        adj = new bool[possibleInputs.Length+possibleHiddens.Length,possibleOutputs.Length+possibleHiddens.Length];
+        adj = new bool[inputNum+hiddenNum,outputNum+hiddenNum];
 
-        input = new Node[possibleInputs.Length];
-        hidden = new Node[possibleHiddens.Length];
-        output = new Node[possibleOutputs.Length];
+        input = new Node[inputNum];
+        hidden = new Node[hiddenNum];
+        output = new Node[outputNum];
 
         for (int i = 0; i < tL; i++) {
             addRandomLink();
+        }
+    }
+
+    public void show() {
+        Debug.Log("Links:");
+        foreach (Link l in links) {
+            l.print();
         }
     }
 
@@ -384,10 +405,11 @@ public class Net
                 o[i] = 0;
             }
         }
-        float m = o[0];
-        Vector3 rL = new Vector3(0,0,o[1]);
-        Vector3 rR = new Vector3(0,0,o[2]);
-        return new Actions(m,rL-rR);
+        float m = Max(Min(o[0],maxSpeed),-maxSpeed);
+        float rL = o[1];
+        float rR = o[2];
+        float rot = Max(Min(rL-rR,maxRotation),-maxRotation);
+        return new Actions(m,rot);
     }
 
     public void initNet() {
@@ -611,6 +633,8 @@ public class Node
 
 public class Link
 {
+    public static bool showZeroWeightLinks = false;
+
     public float weight;
     public Node source;
     public Node dest;
@@ -625,5 +649,14 @@ public class Link
     public void mutateWeight() {
         float m = Random.Range(-1,1);
         weight += m;
+    }
+
+    public void print() {
+        if (showZeroWeightLinks && weight == 0) return;
+        if (source.name != "random") {
+            Debug.Log(source.name + " - " + weight + " - " + dest.name);
+        } else {
+            Debug.Log(source.name + ": " + source.value + " - " + weight + " - " + dest.name);
+        }
     }
 }
