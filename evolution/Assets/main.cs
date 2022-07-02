@@ -3,6 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TODOS
+
+// change rotation to match euler angles
+
+// set min and max for behaviour net outputs
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 public static class GlobalVars
 {
     public static int backgroundWidth = 256;
@@ -277,7 +286,9 @@ public struct Actions {
 public class Net
 {
     int linkNum;
-    int possibleLinks;
+
+    static int possibleLinks;
+    static int linksAtStart;
 
     static string[] possibleInputs;
     static int inputNum;
@@ -296,6 +307,7 @@ public class Net
 
     public Net(int tL, int nH) { //max links and num hidden
         linkNum = 0;
+        linksAtStart = tL;
         links = new List<Link>();
         possibleInputs = new string[] {"constant","random","seeEntity"};
         possibleHiddens = new string[nH];
@@ -325,16 +337,10 @@ public class Net
     }
 
     public Net clone() {
-        Net r = (Net)(this.MemberwiseClone());
-        List<Link> newLinks = new List<Link>();
+        Net r = new Net(linksAtStart,hiddenNum);
         foreach (Link l in links) {
-            newLinks.Add(l);
+            r.addLink(l.index);
         }
-        r.links = newLinks;
-        Copy(input,r.input,inputNum);
-        Copy(hidden,r.hidden,hiddenNum);
-        Copy(output,r.output,outputNum);
-        Copy(adj,r.adj,(inputNum+hiddenNum)*(outputNum+hiddenNum));
         return r;
     }
 
@@ -383,20 +389,26 @@ public class Net
     }
 
     public void addRandomLink() {
-        int r = Random.Range(0,possibleLinks);
+        addLink(Random.Range(0,possibleLinks));
+    }
+
+    public Link addLink(int r) { //returns added link
+        Link l;
+        int index = r;
         if (r < inputNum*outputNum) {
             int r2 = r / inputNum;
             int r3 = r % inputNum;
-            if (adj[r3,r2]) return;
+            if (adj[r3,r2]) return null;
             if (input[r3] == null) {
-                Node n1 = new Node(possibleInputs[r3],r3,r3);
+                Node n1 = new Node(possibleInputs[r3],r3,r3,"input");
                 input[r3] = n1;
             }
             if (output[r2] == null) {
-                Node n2 = new Node(possibleOutputs[r2],r2,r2);
+                Node n2 = new Node(possibleOutputs[r2],r2,r2,"output");
                 output[r2] = n2;
             }
-            Link l = input[r3].addLink(output[r2]);
+            l = input[r3].addLink(output[r2]);
+            l.index = index;
             links.Add(l);
             adj[r3,r2] = true;
             linkNum++;
@@ -406,16 +418,17 @@ public class Net
             int r3 = r % inputNum;
             int i2 = outputNum + r2;
             int i3 = r3;
-            if (adj[i3,i2]) return;
+            if (adj[i3,i2]) return null;
             if (input[r3] == null) {
-                Node n1 = new Node(possibleInputs[r3],i3,r3);
+                Node n1 = new Node(possibleInputs[r3],i3,r3,"input");
                 input[r3] = n1;
             }
             if (hidden[r2] == null) {
-                Node n2 = new Node(possibleHiddens[r2],i2,r2);
+                Node n2 = new Node(possibleHiddens[r2],i2,r2,"hidden");
                 hidden[r2] = n2;
             }
-            Link l = input[r3].addLink(hidden[r2]);
+            l = input[r3].addLink(hidden[r2]);
+            l.index = index;
             links.Add(l);
             adj[i3,i2] = true;
             linkNum++;
@@ -425,20 +438,22 @@ public class Net
             int r3 = r % hiddenNum;
             int i2 = r2;
             int i3 = inputNum + r3;
-            if (adj[i3,i2]) return;
+            if (adj[i3,i2]) return null;
             if (hidden[r3] == null) {
-                Node n1 = new Node(possibleHiddens[r3],i3,r3);
+                Node n1 = new Node(possibleHiddens[r3],i3,r3,"hidden");
                 hidden[r3] = n1;
             }
             if (output[r2] == null) {
-                Node n2 = new Node(possibleOutputs[r2],i2,r2);
+                Node n2 = new Node(possibleOutputs[r2],i2,r2,"output");
                 output[r2] = n2;
             }
-            Link l = hidden[r3].addLink(output[r2]);
+            l = hidden[r3].addLink(output[r2]);
+            l.index = index;
             links.Add(l);
             adj[i3,i2] = true;
             linkNum++;
         }
+        return l;
     }
 
     public void mutate() {
@@ -521,37 +536,41 @@ public class Net
 public class Node
 {
     public float value;
+    public string name;
     public string type;
     public List<Link> links;
     public int index; //adj
-    public int index2; //bool array
+    public int index2; //array
 
-    public Node(string t, List<Link> l) {
-        if (t == "constant") {
+    public Node(string n, List<Link> l, string t) {
+        if (n == "constant") {
             value = 1;
         } else {
             value = 0;
         }
+        name = n;
         type = t;
         links = l;
     }
 
-    public Node(string t) {
-        if (t == "constant") {
+    public Node(string n, string t) {
+        if (n == "constant") {
             value = 1;
         } else {
             value = 0;
         }
+        name = n;
         type = t;
         links = new List<Link>();
     }
 
-    public Node(string t, int i1, int i2) {
-        if (t == "constant") {
+    public Node(string n, int i1, int i2, string t) {
+        if (n == "constant") {
             value = 1;
         } else {
             value = 0;
         }
+        name = n;
         type = t;
         index = i1;
         index2 = i2;
@@ -584,6 +603,7 @@ public class Link
     public float weight;
     public Node source;
     public Node dest;
+    public int index; // number used to generate link in addLink method
 
     public Link(Node s, Node d) {
         weight = Random.Range(-2,2);
