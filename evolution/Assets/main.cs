@@ -34,6 +34,8 @@ public class main : MonoBehaviour
     int numEntities;
     int maxEntities;
 
+    Entity highlighted;
+
     public int time;
     public bool run;
 
@@ -56,12 +58,7 @@ public class main : MonoBehaviour
     void Update()
     {
         if (Input.GetMouseButtonDown(0)) {
-            RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), new Vector3(0,0,-1), 2);
-            if (hit.collider != null)
-            {
-                Entity e = entities.Find(x => x.entityGameObject == hit.collider.gameObject);
-                e.showBehaviourNet();
-            }
+            checkHighlight();
         }
     }
 
@@ -104,6 +101,22 @@ public class main : MonoBehaviour
         background.name = "background";
         SpriteRenderer sr = background.AddComponent<SpriteRenderer>() as SpriteRenderer;
         sr.sprite = backgroundSprite;
+    }
+
+    void checkHighlight() {
+        RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), new Vector3(0,0,-1), 2);
+        if (hit.collider != null)
+        {
+            Entity e = entities.Find(x => x.entityGameObject == hit.collider.gameObject);
+            if (e == highlighted) {
+                e.unhighlight();
+                return;
+            }
+            e.showBehaviourNet();
+            if (highlighted != null) highlighted.unhighlight();
+            highlighted = e;
+            e.highlight();
+        }
     }
 
     void doBehaviour() {
@@ -176,6 +189,7 @@ public class main : MonoBehaviour
     void kill(Entity e) {
         Destroy(e.entityGameObject);
         entities.Remove(e);
+        if (highlighted == e) highlighted = null;
         numEntities--;
     }
 }
@@ -218,6 +232,8 @@ public abstract class Entity
         entityGameObject.transform.position = new Vector3(Random.Range(-GlobalVars.backgroundWidth/2,GlobalVars.backgroundWidth/2),Random.Range(-GlobalVars.backgroundHeight/2,GlobalVars.backgroundHeight/2),0);
     }
 
+    public abstract void highlight();
+    public abstract void unhighlight();
     public abstract void showBehaviourNet();
     public abstract void setInput();
     public abstract void calcBehaviour();
@@ -293,6 +309,14 @@ public class Creature1 : Entity
     public override void showBehaviourNet() {
         behaviour.show();
     }
+
+    public override void highlight() {
+        entityGameObject.GetComponent<SpriteRenderer>().color = Color.blue;
+    }
+
+    public override void unhighlight() {
+        entityGameObject.GetComponent<SpriteRenderer>().color = Color.red;
+    }
 }
 
 public struct Actions {
@@ -339,7 +363,7 @@ public class Net
         for (int i = 0; i < nH; i++) {
             possibleHiddens[i] = "hidden";
         }
-        possibleOutputs = new string[] {"moveForward","rotateLeft","rotateRight"};
+        possibleOutputs = new string[] {"moveForward","rotateLeft"};
         
         inputNum = possibleInputs.Length;
         hiddenNum = possibleHiddens.Length;
@@ -406,9 +430,7 @@ public class Net
             }
         }
         float m = Max(Min(o[0],maxSpeed),-maxSpeed);
-        float rL = o[1];
-        float rR = o[2];
-        float rot = Max(Min(rL-rR,maxRotation),-maxRotation);
+        float rot = Max(Min(o[1],maxRotation),-maxRotation);
         return new Actions(m,rot);
     }
 
@@ -429,61 +451,61 @@ public class Net
         Link l;
         int index = r;
         if (r < inputNum*outputNum) {
-            int r2 = r / inputNum;
-            int r3 = r % inputNum;
-            if (adj[r3,r2]) return null;
-            if (input[r3] == null) {
-                Node n1 = new Node(possibleInputs[r3],r3,r3,"input");
-                input[r3] = n1;
+            int rx = r % inputNum;
+            int ry = r / inputNum;
+            if (adj[rx,ry]) return null;
+            if (input[rx] == null) {
+                Node n1 = new Node(possibleInputs[rx],new int[] {rx,-1},rx,"input");
+                input[rx] = n1;
             }
-            if (output[r2] == null) {
-                Node n2 = new Node(possibleOutputs[r2],r2,r2,"output");
-                output[r2] = n2;
+            if (output[ry] == null) {
+                Node n2 = new Node(possibleOutputs[ry],new int[] {-1,ry},ry,"output");
+                output[ry] = n2;
             }
-            l = input[r3].addLink(output[r2]);
+            l = input[rx].addLink(output[ry]);
             l.index = index;
             links.Add(l);
-            adj[r3,r2] = true;
+            adj[rx,ry] = true;
             linkNum++;
         } else if (r < inputNum*(outputNum+hiddenNum)) {
             r = r-(inputNum*outputNum);
-            int r2 = r / inputNum;
-            int r3 = r % inputNum;
-            int i2 = outputNum + r2;
-            int i3 = r3;
-            if (adj[i3,i2]) return null;
-            if (input[r3] == null) {
-                Node n1 = new Node(possibleInputs[r3],i3,r3,"input");
-                input[r3] = n1;
+            int rx = r % inputNum;
+            int ry = r / inputNum;
+            int ix = rx;
+            int iy = outputNum + ry;
+            if (adj[ix,iy]) return null;
+            if (input[rx] == null) {
+                Node n1 = new Node(possibleInputs[rx],new int[] {ix,-1},rx,"input");
+                input[rx] = n1;
             }
-            if (hidden[r2] == null) {
-                Node n2 = new Node(possibleHiddens[r2],i2,r2,"hidden");
-                hidden[r2] = n2;
+            if (hidden[ry] == null) {
+                Node n2 = new Node(possibleHiddens[ry],new int[] {inputNum+ry,iy},ry,"hidden");
+                hidden[ry] = n2;
             }
-            l = input[r3].addLink(hidden[r2]);
+            l = input[rx].addLink(hidden[ry]);
             l.index = index;
             links.Add(l);
-            adj[i3,i2] = true;
+            adj[ix,iy] = true;
             linkNum++;
         } else {
             r = r-(inputNum*(outputNum+hiddenNum));
-            int r2 = r / hiddenNum;
-            int r3 = r % hiddenNum;
-            int i2 = r2;
-            int i3 = inputNum + r3;
-            if (adj[i3,i2]) return null;
-            if (hidden[r3] == null) {
-                Node n1 = new Node(possibleHiddens[r3],i3,r3,"hidden");
-                hidden[r3] = n1;
+            int rx = r % hiddenNum;
+            int ry = r / hiddenNum;
+            int ix = inputNum + rx;
+            int iy = ry;
+            if (adj[ix,iy]) return null;
+            if (hidden[rx] == null) {
+                Node n1 = new Node(possibleHiddens[rx],new int[] {ix,outputNum+rx},rx,"hidden");
+                hidden[rx] = n1;
             }
-            if (output[r2] == null) {
-                Node n2 = new Node(possibleOutputs[r2],i2,r2,"output");
-                output[r2] = n2;
+            if (output[ry] == null) {
+                Node n2 = new Node(possibleOutputs[ry],new int[] {-1,iy},ry,"output");
+                output[ry] = n2;
             }
-            l = hidden[r3].addLink(output[r2]);
+            l = hidden[rx].addLink(output[ry]);
             l.index = index;
             links.Add(l);
-            adj[i3,i2] = true;
+            adj[ix,iy] = true;
             linkNum++;
         }
         return l;
@@ -515,7 +537,8 @@ public class Net
         int r = Random.Range(0,linkNum);
         Link w = links[r];
         w.source.links.Remove(w);
-        adj[w.source.index,w.dest.index] = false;
+        //Debug.Log(w.source.index + " " + w.dest.index);
+        adj[w.source.index[0],w.dest.index[1]] = false;
         cleanS(w.source);
         cleanD(w.dest);
         links.Remove(w);
@@ -523,7 +546,7 @@ public class Net
     }
 
     public void cleanS(Node n) {
-        if (n.index < inputNum) {
+        if (n.index[0] < inputNum) {
             if (!(n.links.Count == 0)) {
                 input[n.index2] = null;
             }
@@ -535,8 +558,8 @@ public class Net
     }
 
     public void cleanD(Node n) {
-        if (n.index < outputNum) {
-            if (!checkOutputNodeLinked(n.index)) {
+        if (n.index[1] < outputNum) {
+            if (!checkOutputNodeLinked(n.index[1])) {
                 output[n.index2] = null;
             }
         } else {
@@ -546,13 +569,13 @@ public class Net
         }
     }
 
-    public bool checkHiddenNodeLinked(int index) {
+    public bool checkHiddenNodeLinked(int[] index) {
         bool r = false;
         for (int i = 0; i < inputNum; i++) {
-            if (adj[i,index]) r = true;
+            if (adj[i,index[1]]) r = true;
         }
         for (int i = 0; i < outputNum; i++) {
-            if (adj[index,i]) r = true;
+            if (adj[index[0],i]) r = true;
         }
         return r;
     }
@@ -560,7 +583,7 @@ public class Net
     public bool checkOutputNodeLinked(int index) {
         bool r = false;
         for (int i = 0; i < outputNum+hiddenNum; i++) {
-            if (adj[index,i]) r = true;
+            if (adj[i,index]) r = true;
         }
         return r;
     }
@@ -572,7 +595,7 @@ public class Node
     public string name;
     public string type;
     public List<Link> links;
-    public int index; //adj
+    public int[] index; //adj
     public int index2; //array
 
     public Node(string n, List<Link> l, string t) {
@@ -597,7 +620,7 @@ public class Node
         links = new List<Link>();
     }
 
-    public Node(string n, int i1, int i2, string t) {
+    public Node(string n, int[] i1, int i2, string t) {
         if (n == "constant") {
             value = 1;
         } else {
@@ -652,7 +675,7 @@ public class Link
     }
 
     public void print() {
-        if (showZeroWeightLinks && weight == 0) return;
+        if (!showZeroWeightLinks && weight == 0) return;
         if (source.name != "random") {
             Debug.Log(source.name + " - " + weight + " - " + dest.name);
         } else {
