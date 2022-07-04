@@ -34,7 +34,10 @@ public class main : MonoBehaviour
     int numEntities;
     int maxEntities;
 
-    List<Plant> plants;
+    List<Entity> behaviourables;
+    int numCreatures;
+    int maxCreatures;
+
     int numPlants;
     int maxPlants;
 
@@ -47,8 +50,9 @@ public class main : MonoBehaviour
     {
         time = 1;
         run = false;
-        maxEntities = 50;
-        maxPlants = 20;
+        maxCreatures = 50;
+        maxPlants = 30;
+        maxEntities = maxCreatures + maxPlants;
         makeBackground();
     }
 
@@ -86,22 +90,31 @@ public class main : MonoBehaviour
     void spawnEntities() {
         entities = new List<Entity>();
         numEntities = 0;
-        for (int i = 0; i < maxEntities; i++) {
+        behaviourables = new List<Entity>();
+        spawnCreatures();
+        spawnPlants();
+    }
+
+    void spawnCreatures() {
+        numCreatures = 0;
+        for (int i = 0; i < maxCreatures; i++) {
             Entity e = new Creature1();
             entities.Add(e);
+            bahaviourables.Add(e);
             e.setRandPos();
+            numCreatures++;
             numEntities++;
         }
     }
 
     void spawnPlants() {
-        plants = new List<Plant>();
         numPlants = 0;
         for (int i = 0; i < maxPlants; i++) {
             Plant p = new Plant();
             plants.Add(p);
             p.setRandPos();
             numPlants++;
+            numEntities++;
         }
     }
 
@@ -125,6 +138,7 @@ public class main : MonoBehaviour
         if (hit.collider != null)
         {
             Entity e = entities.Find(x => x.entityGameObject == hit.collider.gameObject);
+            if (!e.hasBehaviour) return;
             if (e == highlighted) {
                 e.unhighlight();
                 return;
@@ -143,28 +157,28 @@ public class main : MonoBehaviour
     }
 
     void setInputs() {
-        foreach(Entity e in entities) {
+        foreach(Entity e in behaviourables) {
             e.setInput();
         }
     }
 
     void calcBehaviours() {
-        foreach(Entity e in entities) {
+        foreach(Entity e in behaviourables) {
             e.calcBehaviour();
         }
     }
 
     void moveEntities() {
         foreach(Entity e in entities) {
-            e.move();
+            if (e.canMove) e.move();
             e.checkBoundaries();
         }
     }
 
     void mutate() {
-        if (numEntities == 0) return;
-        int r = Random.Range(0,numEntities);
-        entities[r].mutate();
+        if (numCreatures == 0) return;
+        int r = Random.Range(0,numCreatures);
+        behaviourables[r].mutate();
     }
 
     void nextGen() {
@@ -174,32 +188,33 @@ public class main : MonoBehaviour
 
     void deleteTouching() {
         List<Entity> toDie = new List<Entity>();
-        foreach(Entity e in entities) {
+        foreach(Entity e in creatures) {
             if (e.isTouching()) toDie.Add(e);
         }
         foreach(Entity e in toDie) {
-            //Debug.Log("killing " + e.id);
             kill(e);
         }
     }
 
     void checkAllDead() {
-        if (numEntities == 0) {
-            Debug.Log("all entities are dead, time: " + time);
+        if (numCreatures == 0) {
+            Debug.Log("all creatures are dead, time: " + time);
             run = false;
         }
     }
 
     void multiply() {
-        if (numEntities == 0) return;
-        while (numEntities < maxEntities) {
-            int r = Random.Range(0,numEntities);
-            Entity e = entities[r];
+        if (numCreatures == 0) return;
+        while (numEntities < maxCreatures) {
+            int r = Random.Range(0,numCreatures);
+            Entity e = behaviourables[r];
             Entity newE = new Creature1();
             newE.behaviour = e.behaviour.clone();
             entities.Add(newE);
+            behaviourables.Add(newE);
             newE.setRandPos();
             numEntities++;
+            numCreatures++;
         }
     }
 
@@ -208,6 +223,7 @@ public class main : MonoBehaviour
         entities.Remove(e);
         if (highlighted == e) highlighted = null;
         numEntities--;
+        numCreatures--;
     }
 }
 
@@ -216,7 +232,6 @@ public abstract class Entity
 {
     static int nextId = 0;
 
-    public static bool initialized = false;
     public static GameObject firstGameobject;
 
     public int id;
@@ -225,10 +240,14 @@ public abstract class Entity
     public int speed = 10;
 
     public Actions nextAction;
+
+    public bool canMove;
+    public bool hasBehaviour;
     
     public Entity() {
         id = nextId++;
-        behaviour = new Net(5,1);
+        if (hasBehaviour) behaviour = new Net(5,1);
+        setBools();
         if (!initialized) {
             makeEntity();
             initialized = !initialized;
@@ -248,14 +267,30 @@ public abstract class Entity
     public void setRandPos() {
         entityGameObject.transform.position = new Vector3(Random.Range(-GlobalVars.backgroundWidth/2,GlobalVars.backgroundWidth/2),Random.Range(-GlobalVars.backgroundHeight/2,GlobalVars.backgroundHeight/2),0);
     }
+    
+    public void checkBoundaries() {
+        Rect b = new Rect(-GlobalVars.backgroundWidth/20,-GlobalVars.backgroundHeight/20,GlobalVars.backgroundWidth/10,GlobalVars.backgroundHeight/10);
+        Vector3 p = new Vector3(entityGameObject.transform.position.x,entityGameObject.transform.position.y,0);
+        if (!b.Contains(p)) {
+            if (entityGameObject.transform.position.x > GlobalVars.backgroundWidth/20) {
+                entityGameObject.transform.position += new Vector3(-GlobalVars.backgroundWidth/10,0,0);
+            } else if (entityGameObject.transform.position.x < -GlobalVars.backgroundWidth/20) {
+                entityGameObject.transform.position += new Vector3(GlobalVars.backgroundWidth/10,0,0);
+            } else if (entityGameObject.transform.position.y > GlobalVars.backgroundHeight/20) {
+                entityGameObject.transform.position += new Vector3(0,-GlobalVars.backgroundHeight/10,0);
+            } else if (entityGameObject.transform.position.y < -GlobalVars.backgroundHeight/20) { 
+                entityGameObject.transform.position += new Vector3(0,GlobalVars.backgroundHeight/10,0);
+            }
+        }
+    }
 
+    public abstract void setBools();
     public abstract void highlight();
     public abstract void unhighlight();
     public abstract void showBehaviourNet();
     public abstract void setInput();
     public abstract void calcBehaviour();
     public abstract void move();
-    public abstract void checkBoundaries();
     public abstract void makeEntity();
     public abstract void mutate();
 }
@@ -263,6 +298,7 @@ public abstract class Entity
 public class Creature1 : Entity
 {
     static Texture2D tex = new Texture2D(10,10);
+    public static bool initialized = false;
 
     public override void makeEntity() {
         Color[] colorArray = new Color[tex.GetPixels().Length];
@@ -285,6 +321,11 @@ public class Creature1 : Entity
         behaviour.setInput(checkSeeEntity());
     }
 
+    public override void setBools() {
+        canMove = true;
+        hasBehaviour = true;
+    }
+
     public bool checkSeeEntity() {
         Vector3 fwd = entityGameObject.transform.up;
         Vector3 origin = entityGameObject.transform.position+(entityGameObject.transform.up/2);
@@ -303,21 +344,6 @@ public class Creature1 : Entity
         entityGameObject.transform.Translate(new Vector3(0,0.01f*nextAction.forwardM,0));
     }
 
-    public override void checkBoundaries() {
-        Rect b = new Rect(-GlobalVars.backgroundWidth/20,-GlobalVars.backgroundHeight/20,GlobalVars.backgroundWidth/10,GlobalVars.backgroundHeight/10);
-        Vector3 p = new Vector3(entityGameObject.transform.position.x,entityGameObject.transform.position.y,0);
-        if (!b.Contains(p)) {
-            if (entityGameObject.transform.position.x > GlobalVars.backgroundWidth/20) {
-                entityGameObject.transform.position += new Vector3(-GlobalVars.backgroundWidth/10,0,0);
-            } else if (entityGameObject.transform.position.x < -GlobalVars.backgroundWidth/20) {
-                entityGameObject.transform.position += new Vector3(GlobalVars.backgroundWidth/10,0,0);
-            } else if (entityGameObject.transform.position.y > GlobalVars.backgroundHeight/20) {
-                entityGameObject.transform.position += new Vector3(0,-GlobalVars.backgroundHeight/10,0);
-            } else if (entityGameObject.transform.position.y < -GlobalVars.backgroundHeight/20) { 
-                entityGameObject.transform.position += new Vector3(0,GlobalVars.backgroundHeight/10,0);
-            }
-        }
-    }
 
     public override void mutate() {
         behaviour.mutate();
@@ -701,25 +727,12 @@ public class Link
     }
 }
 
-public class Plant {
-    public int id;
-    static int nextId = 0;
+public class Plant : Entity {
 
-    public GameObject plantGameObject;
     static GameObject firstGameObject;
     static Texture2D tex = new Texture2D(10,10);
 
     static bool initialized = false;
-
-    public Plant() {
-        id = nextId++;
-        if (!initialized) {
-            makePlant();
-            initialized = !initialized;
-        }
-        plantGameObject = Object.Instantiate(firstGameObject,new Vector3(0, 0, 0), Quaternion.identity);
-        plantGameObject.SetActive(true);
-    }
 
     void makePlant() {
         Color[] colorArray = new Color[tex.GetPixels().Length];
@@ -737,8 +750,9 @@ public class Plant {
         sr.sprite = plantSprite;
         BoxCollider2D collider = firstGameObject.AddComponent<BoxCollider2D>() as BoxCollider2D;
     }
-
-    public void setRandPos() {
-        plantGameObject.transform.position = new Vector3(Random.Range(-GlobalVars.backgroundWidth/2,GlobalVars.backgroundWidth/2),Random.Range(-GlobalVars.backgroundHeight/2,GlobalVars.backgroundHeight/2),0);
+    
+    public override void setBools() {
+        canMove = false;
+        hasBehaviour = false;
     }
 }
