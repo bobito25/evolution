@@ -34,6 +34,10 @@ public class main : MonoBehaviour
     int numEntities;
     int maxEntities;
 
+    List<Plant> plants;
+    int numPlants;
+    int maxPlants;
+
     Entity highlighted;
 
     public int time;
@@ -51,6 +55,7 @@ public class main : MonoBehaviour
     void Start()
     {
         spawnEntities();
+        spawnPlants();
         run = true;
     }
 
@@ -85,6 +90,17 @@ public class main : MonoBehaviour
             entities.Add(e);
             e.setRandPos();
             numEntities++;
+        }
+    }
+
+    void spawnPlants() {
+        plants = new List<Entity>();
+        numPlants = 0;
+        for (int i = 0; i < maxPlant; i++) {
+            Plant p = new Plant();
+            plants.Add(p);
+            p.setRandPos();
+            numPlants++;
         }
     }
 
@@ -681,5 +697,45 @@ public class Link
         } else {
             Debug.Log(source.name + ": " + source.value + " - " + weight + " - " + dest.name);
         }
+    }
+}
+
+public class Plant() {
+    public int id;
+    static int nextId = 0;
+
+    public gameObject plantGameObject;
+    static gameObject firstGameObject;
+    static Texture2D tex = new Texture2D(10,10);
+
+    public Plant() {
+        id = nextId++;
+        if (!initialized) {
+            makePlant();
+            initialized = !initialized;
+        }
+        plantGameObject = Object.Instantiate(firstGameobject,new Vector3(0, 0, 0), Quaternion.identity);
+        plantGameObject.SetActive(true);
+    }
+
+    makePlant() {
+        Color[] colorArray = new Color[tex.GetPixels().Length];
+        for (int i = 0; i < colorArray.Length; i++) {
+            colorArray[i] = Color.green;
+        }
+        tex.SetPixels(colorArray);
+        tex.Apply();
+        Sprite plantSprite = Sprite.Create(tex, new Rect(0,0,tex.width,tex.height),new Vector2(0.5f, 0.5f),20);
+        firstGameobject = new GameObject();
+        firstGameobject.SetActive(false);
+        firstGameobject.name = "plant";
+        SpriteRenderer sr = firstGameobject.AddComponent<SpriteRenderer>() as SpriteRenderer;
+        sr.sortingOrder = 1;
+        sr.sprite = creature1Sprite;
+        BoxCollider2D collider = firstGameobject.AddComponent<BoxCollider2D>() as BoxCollider2D;
+    }
+
+    public void setRandPos() {
+        plantGameObject.transform.position = new Vector3(Random.Range(-GlobalVars.backgroundWidth/2,GlobalVars.backgroundWidth/2),Random.Range(-GlobalVars.backgroundHeight/2,GlobalVars.backgroundHeight/2),0);
     }
 }
