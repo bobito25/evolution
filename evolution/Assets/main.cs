@@ -10,7 +10,7 @@ using UnityEngine;
 
 //  implement way to see bahaviour nets while running / clickable nodes
 
-// make game states saveable
+//  make game states saveable
 
 //  change evo pressure: add food, hunger, seeFood input
 
@@ -48,6 +48,7 @@ public class main : MonoBehaviour
         time = 1;
         run = false;
         maxEntities = 50;
+        maxPlants = 20;
         makeBackground();
     }
 
@@ -94,9 +95,9 @@ public class main : MonoBehaviour
     }
 
     void spawnPlants() {
-        plants = new List<Entity>();
+        plants = new List<Plant>();
         numPlants = 0;
-        for (int i = 0; i < maxPlant; i++) {
+        for (int i = 0; i < maxPlants; i++) {
             Plant p = new Plant();
             plants.Add(p);
             p.setRandPos();
@@ -700,13 +701,15 @@ public class Link
     }
 }
 
-public class Plant() {
+public class Plant {
     public int id;
     static int nextId = 0;
 
-    public gameObject plantGameObject;
-    static gameObject firstGameObject;
+    public GameObject plantGameObject;
+    static GameObject firstGameObject;
     static Texture2D tex = new Texture2D(10,10);
+
+    static bool initialized = false;
 
     public Plant() {
         id = nextId++;
@@ -714,11 +717,11 @@ public class Plant() {
             makePlant();
             initialized = !initialized;
         }
-        plantGameObject = Object.Instantiate(firstGameobject,new Vector3(0, 0, 0), Quaternion.identity);
+        plantGameObject = Object.Instantiate(firstGameObject,new Vector3(0, 0, 0), Quaternion.identity);
         plantGameObject.SetActive(true);
     }
 
-    makePlant() {
+    void makePlant() {
         Color[] colorArray = new Color[tex.GetPixels().Length];
         for (int i = 0; i < colorArray.Length; i++) {
             colorArray[i] = Color.green;
@@ -726,13 +729,13 @@ public class Plant() {
         tex.SetPixels(colorArray);
         tex.Apply();
         Sprite plantSprite = Sprite.Create(tex, new Rect(0,0,tex.width,tex.height),new Vector2(0.5f, 0.5f),20);
-        firstGameobject = new GameObject();
-        firstGameobject.SetActive(false);
-        firstGameobject.name = "plant";
-        SpriteRenderer sr = firstGameobject.AddComponent<SpriteRenderer>() as SpriteRenderer;
+        firstGameObject = new GameObject();
+        firstGameObject.SetActive(false);
+        firstGameObject.name = "plant";
+        SpriteRenderer sr = firstGameObject.AddComponent<SpriteRenderer>() as SpriteRenderer;
         sr.sortingOrder = 1;
-        sr.sprite = creature1Sprite;
-        BoxCollider2D collider = firstGameobject.AddComponent<BoxCollider2D>() as BoxCollider2D;
+        sr.sprite = plantSprite;
+        BoxCollider2D collider = firstGameObject.AddComponent<BoxCollider2D>() as BoxCollider2D;
     }
 
     public void setRandPos() {
