@@ -8,28 +8,17 @@ public abstract class Entity
 {
     static int nextId = 0;
 
-    public static GameObject firstGameobject;
-
     public int id;
-    public Net behaviour;
     public GameObject entityGameObject;
     public int speed = 10;
-
-    public Actions nextAction;
-
-    public bool canMove;
-    public bool hasBehaviour;
     
     public Entity() {
         id = nextId++;
-        if (hasBehaviour) behaviour = new Net(5,1);
-        setBools();
-        if (!initialized) {
-            makeEntity();
-            initialized = !initialized;
-        }
-        entityGameObject = Object.Instantiate(firstGameobject,new Vector3(0, 0, 0), Quaternion.identity);
-        entityGameObject.SetActive(true);
+    }
+
+    public static void init() {
+        Plant.initEntity();
+        Creature1.initEntity();
     }
 
     public bool isTouching() {
@@ -45,28 +34,18 @@ public abstract class Entity
     }
     
     public void checkBoundaries() {
-        Rect b = new Rect(-GlobalVars.backgroundWidth/20,-GlobalVars.backgroundHeight/20,GlobalVars.backgroundWidth/10,GlobalVars.backgroundHeight/10);
+        Rect b = new Rect(-GlobalVars.backgroundWidth/2,-GlobalVars.backgroundHeight/2,GlobalVars.backgroundWidth,GlobalVars.backgroundHeight);
         Vector3 p = new Vector3(entityGameObject.transform.position.x,entityGameObject.transform.position.y,0);
         if (!b.Contains(p)) {
-            if (entityGameObject.transform.position.x > GlobalVars.backgroundWidth/20) {
-                entityGameObject.transform.position += new Vector3(-GlobalVars.backgroundWidth/10,0,0);
-            } else if (entityGameObject.transform.position.x < -GlobalVars.backgroundWidth/20) {
-                entityGameObject.transform.position += new Vector3(GlobalVars.backgroundWidth/10,0,0);
-            } else if (entityGameObject.transform.position.y > GlobalVars.backgroundHeight/20) {
-                entityGameObject.transform.position += new Vector3(0,-GlobalVars.backgroundHeight/10,0);
-            } else if (entityGameObject.transform.position.y < -GlobalVars.backgroundHeight/20) { 
-                entityGameObject.transform.position += new Vector3(0,GlobalVars.backgroundHeight/10,0);
+            if (entityGameObject.transform.position.x > GlobalVars.backgroundWidth/2) {
+                entityGameObject.transform.position += new Vector3(-GlobalVars.backgroundWidth,0,0);
+            } else if (entityGameObject.transform.position.x < -GlobalVars.backgroundWidth/2) {
+                entityGameObject.transform.position += new Vector3(GlobalVars.backgroundWidth,0,0);
+            } else if (entityGameObject.transform.position.y > GlobalVars.backgroundHeight/2) {
+                entityGameObject.transform.position += new Vector3(0,-GlobalVars.backgroundHeight,0);
+            } else if (entityGameObject.transform.position.y < -GlobalVars.backgroundHeight/2) { 
+                entityGameObject.transform.position += new Vector3(0,GlobalVars.backgroundHeight,0);
             }
         }
     }
-
-    public abstract void setBools();
-    public abstract void highlight();
-    public abstract void unhighlight();
-    public abstract void showBehaviourNet();
-    public abstract void setInput();
-    public abstract void calcBehaviour();
-    public abstract void move();
-    public abstract void makeEntity();
-    public abstract void mutate();
 }

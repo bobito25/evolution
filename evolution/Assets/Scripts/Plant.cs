@@ -6,12 +6,15 @@ using UnityEngine;
 
 public class Plant : Entity {
 
-    static GameObject firstGameObject;
+    public static GameObject firstGameObject;
     static Texture2D tex = new Texture2D(10,10);
 
-    static bool initialized = false;
+    public Plant() {
+        entityGameObject = Object.Instantiate(firstGameObject,new Vector3(0, 0, 0), Quaternion.identity);
+        entityGameObject.SetActive(true);
+    }
 
-    void makePlant() {
+    public static void initEntity() {
         Color[] colorArray = new Color[tex.GetPixels().Length];
         for (int i = 0; i < colorArray.Length; i++) {
             colorArray[i] = Color.green;
@@ -27,9 +30,8 @@ public class Plant : Entity {
         sr.sprite = plantSprite;
         BoxCollider2D collider = firstGameObject.AddComponent<BoxCollider2D>() as BoxCollider2D;
     }
-    
-    public override void setBools() {
-        canMove = false;
-        hasBehaviour = false;
-    }
+
+    public static GameObject cloneGameObject() {
+        return Object.Instantiate(firstGameObject,new Vector3(0, 0, 0), Quaternion.identity);
+    } 
 }

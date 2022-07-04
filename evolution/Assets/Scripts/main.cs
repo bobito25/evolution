@@ -28,14 +28,14 @@ public class main : MonoBehaviour
     int numEntities;
     int maxEntities;
 
-    List<Entity> behaviourables;
+    List<Behaviourable> behaviourables;
     int numCreatures;
     int maxCreatures;
 
     int numPlants;
     int maxPlants;
 
-    Entity highlighted;
+    Behaviourable highlighted;
 
     public int time;
     public bool run;
@@ -45,9 +45,10 @@ public class main : MonoBehaviour
         time = 1;
         run = false;
         maxCreatures = 50;
-        maxPlants = 30;
+        maxPlants = 50;
         maxEntities = maxCreatures + maxPlants;
         makeBackground();
+        initEntities();
     }
 
     // Start is called before the first frame update
@@ -84,7 +85,7 @@ public class main : MonoBehaviour
     void spawnEntities() {
         entities = new List<Entity>();
         numEntities = 0;
-        behaviourables = new List<Entity>();
+        behaviourables = new List<Behaviourable>();
         spawnCreatures();
         spawnPlants();
     }
@@ -94,7 +95,7 @@ public class main : MonoBehaviour
         for (int i = 0; i < maxCreatures; i++) {
             Entity e = new Creature1();
             entities.Add(e);
-            bahaviourables.Add(e);
+            behaviourables.Add((Behaviourable)e);
             e.setRandPos();
             numCreatures++;
             numEntities++;
@@ -105,11 +106,15 @@ public class main : MonoBehaviour
         numPlants = 0;
         for (int i = 0; i < maxPlants; i++) {
             Plant p = new Plant();
-            plants.Add(p);
+            entities.Add(p);
             p.setRandPos();
             numPlants++;
             numEntities++;
         }
+    }
+
+    void initEntities() {
+        Entity.init();
     }
 
     void makeBackground() {
@@ -120,7 +125,7 @@ public class main : MonoBehaviour
         }
         backgroundTex.SetPixels(colorArray);
         backgroundTex.Apply();
-        Sprite backgroundSprite = Sprite.Create(backgroundTex, new Rect(0,0,backgroundTex.width,backgroundTex.height),new Vector2(0.5f, 0.5f),10);
+        Sprite backgroundSprite = Sprite.Create(backgroundTex, new Rect(0,0,backgroundTex.width,backgroundTex.height),new Vector2(0.5f, 0.5f),1);
         GameObject background = new GameObject();
         background.name = "background";
         SpriteRenderer sr = background.AddComponent<SpriteRenderer>() as SpriteRenderer;
@@ -131,8 +136,8 @@ public class main : MonoBehaviour
         RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), new Vector3(0,0,-1), 2);
         if (hit.collider != null)
         {
-            Entity e = entities.Find(x => x.entityGameObject == hit.collider.gameObject);
-            if (!e.hasBehaviour) return;
+            Behaviourable e = behaviourables.Find(x => x.entityGameObject == hit.collider.gameObject);
+            if (e == null) return;
             if (e == highlighted) {
                 e.unhighlight();
                 return;
@@ -151,20 +156,20 @@ public class main : MonoBehaviour
     }
 
     void setInputs() {
-        foreach(Entity e in behaviourables) {
+        foreach(Behaviourable e in behaviourables) {
             e.setInput();
         }
     }
 
     void calcBehaviours() {
-        foreach(Entity e in behaviourables) {
+        foreach(Behaviourable e in behaviourables) {
             e.calcBehaviour();
         }
     }
 
     void moveEntities() {
-        foreach(Entity e in entities) {
-            if (e.canMove) e.move();
+        foreach(Behaviourable e in behaviourables) {
+            e.move();
             e.checkBoundaries();
         }
     }
@@ -182,7 +187,7 @@ public class main : MonoBehaviour
 
     void deleteTouching() {
         List<Entity> toDie = new List<Entity>();
-        foreach(Entity e in creatures) {
+        foreach(Behaviourable e in behaviourables) {
             if (e.isTouching()) toDie.Add(e);
         }
         foreach(Entity e in toDie) {
@@ -199,13 +204,13 @@ public class main : MonoBehaviour
 
     void multiply() {
         if (numCreatures == 0) return;
-        while (numEntities < maxCreatures) {
+        while (numCreatures < maxCreatures) {
             int r = Random.Range(0,numCreatures);
             Entity e = behaviourables[r];
             Entity newE = new Creature1();
-            newE.behaviour = e.behaviour.clone();
+            ((Behaviourable)newE).behaviour = ((Behaviourable)e).behaviour.clone();
             entities.Add(newE);
-            behaviourables.Add(newE);
+            behaviourables.Add((Behaviourable)newE);
             newE.setRandPos();
             numEntities++;
             numCreatures++;
@@ -215,6 +220,7 @@ public class main : MonoBehaviour
     void kill(Entity e) {
         Destroy(e.entityGameObject);
         entities.Remove(e);
+        behaviourables.Remove((Behaviourable)e);
         if (highlighted == e) highlighted = null;
         numEntities--;
         numCreatures--;

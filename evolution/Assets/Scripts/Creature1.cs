@@ -4,12 +4,17 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Creature1 : Entity
+public class Creature1 : Behaviourable
 {
+    public static GameObject firstGameobject;
     static Texture2D tex = new Texture2D(10,10);
-    public static bool initialized = false;
 
-    public override void makeEntity() {
+    public Creature1() {
+        entityGameObject = Object.Instantiate(firstGameobject,new Vector3(0, 0, 0), Quaternion.identity);
+        entityGameObject.SetActive(true);
+    }
+    
+    public static void initEntity() {
         Color[] colorArray = new Color[tex.GetPixels().Length];
         for (int i = 0; i < colorArray.Length; i++) {
             colorArray[i] = Color.red;
@@ -28,11 +33,6 @@ public class Creature1 : Entity
 
     public override void setInput() {
         behaviour.setInput(checkSeeEntity());
-    }
-
-    public override void setBools() {
-        canMove = true;
-        hasBehaviour = true;
     }
 
     public bool checkSeeEntity() {
