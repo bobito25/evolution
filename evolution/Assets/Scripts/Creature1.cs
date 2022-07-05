@@ -12,9 +12,12 @@ public class Creature1 : Behaviourable
     public Creature1() {
         entityGameObject = Object.Instantiate(firstGameobject,new Vector3(0, 0, 0), Quaternion.identity);
         entityGameObject.SetActive(true);
+        stomachFullness = 300;
+        entityGameObject.layer = 10;
     }
     
     public static void initEntity() {
+        hungerRate = 1;
         Color[] colorArray = new Color[tex.GetPixels().Length];
         for (int i = 0; i < colorArray.Length; i++) {
             colorArray[i] = Color.red;
@@ -32,7 +35,7 @@ public class Creature1 : Behaviourable
     }
 
     public override void setInput() {
-        behaviour.setInput(checkSeeEntity());
+        behaviour.setInput(checkSeePlant());
     }
 
     public bool checkSeeEntity() {
@@ -40,8 +43,15 @@ public class Creature1 : Behaviourable
         Vector3 origin = entityGameObject.transform.position+(entityGameObject.transform.up/2);
         //Debug.DrawRay(origin, fwd*3, Color.yellow);
         RaycastHit2D hit = Physics2D.Raycast(origin, fwd, 3);
-        //if (hit.collider != null) Debug.Log(hit.distance);
         return hit.collider != null;
+    }
+
+    public bool checkSeePlant() {
+        Vector3 fwd = entityGameObject.transform.up;
+        Vector3 origin = entityGameObject.transform.position+(entityGameObject.transform.up/2);
+        RaycastHit2D hit = Physics2D.Raycast(origin, fwd, 3);
+        //if (hit.collider != null) Debug.Log(hit.collider.name);
+        return hit.collider != null && hit.collider.name == "plant(Clone)";
     }
 
     public override void calcBehaviour() {

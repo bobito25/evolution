@@ -9,6 +9,8 @@ public class Plant : Entity {
     public static GameObject firstGameObject;
     static Texture2D tex = new Texture2D(10,10);
 
+    public static int nutrition = 100;
+
     public Plant() {
         entityGameObject = Object.Instantiate(firstGameObject,new Vector3(0, 0, 0), Quaternion.identity);
         entityGameObject.SetActive(true);

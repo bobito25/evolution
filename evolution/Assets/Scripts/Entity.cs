@@ -21,12 +21,28 @@ public abstract class Entity
         Creature1.initEntity();
     }
 
-    public bool isTouching() {
+    public bool isTouchingBehaviourable() {
         Collider2D collider = entityGameObject.GetComponent<Collider2D>();
         if (collider == null) Debug.Log("collider is null (funct isTouching)");
         Collider2D[] r = new Collider2D[1];
         ContactFilter2D cf = new ContactFilter2D();
-        return !(collider.OverlapCollider(cf.NoFilter(), r) == 0);
+        cf.useLayerMask = true;
+        cf.SetLayerMask(1 << 10);
+        return !(collider.OverlapCollider(cf, r) == 0);
+    }
+
+    public Collider2D getTouchingBehaviourable() {
+        Collider2D collider = entityGameObject.GetComponent<Collider2D>();
+        if (collider == null) Debug.Log("collider is null (funct isTouching)");
+        Collider2D[] r = new Collider2D[1];
+        ContactFilter2D cf = new ContactFilter2D();
+        cf.useLayerMask = true;
+        cf.SetLayerMask(1 << 10);
+        if (collider.OverlapCollider(cf, r) != 0) {
+            return r[0];
+        } else {
+            return null;
+        }
     }
 
     public void setRandPos() {

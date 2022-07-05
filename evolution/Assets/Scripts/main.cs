@@ -8,8 +8,6 @@ using UnityEngine;
 
 // TODOs:
 
-//  implement way to see bahaviour nets while running / clickable nodes
-
 //  make game states saveable
 
 //  change evo pressure: add food, hunger, seeFood input
@@ -18,7 +16,7 @@ using UnityEngine;
 
 //  gamespeed slider
 
-//  fix camera (dynammically)
+//  visualize behaviour nets
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -32,6 +30,7 @@ public class main : MonoBehaviour
     int numCreatures;
     int maxCreatures;
 
+    List<Plant> plants;
     int numPlants;
     int maxPlants;
 
@@ -39,6 +38,8 @@ public class main : MonoBehaviour
 
     public int time;
     public bool run;
+
+    public float mutChance;
 
     void Awake()
     {
@@ -49,13 +50,14 @@ public class main : MonoBehaviour
         maxEntities = maxCreatures + maxPlants;
         makeBackground();
         initEntities();
+        fixCameraSize();
+        mutChance = 0.05f;
     }
 
     // Start is called before the first frame update
     void Start()
     {
         spawnEntities();
-        spawnPlants();
         run = true;
     }
 
@@ -65,14 +67,22 @@ public class main : MonoBehaviour
         if (Input.GetMouseButtonDown(0)) {
             checkHighlight();
         }
+        eatPlants();
     }
 
     void FixedUpdate()
     {
         if (run) {
             doBehaviour();
+            killStarved();
+            if (time % 10 == 0) {
+                hunger();
+            }
             if (time % 20 == 0) {
                 mutate();
+            }
+            if (time % 100 == 0) {
+                grow();
             }
             if (time % 1000 == 0) {
                 nextGen();
@@ -82,10 +92,15 @@ public class main : MonoBehaviour
         }
     }
 
+    void fixCameraSize() {
+        Camera.main.orthographicSize = GlobalVars.backgroundWidth/2;
+    }
+
     void spawnEntities() {
         entities = new List<Entity>();
         numEntities = 0;
         behaviourables = new List<Behaviourable>();
+        plants = new List<Plant>();
         spawnCreatures();
         spawnPlants();
     }
@@ -107,6 +122,7 @@ public class main : MonoBehaviour
         for (int i = 0; i < maxPlants; i++) {
             Plant p = new Plant();
             entities.Add(p);
+            plants.Add(p);
             p.setRandPos();
             numPlants++;
             numEntities++;
@@ -142,10 +158,42 @@ public class main : MonoBehaviour
                 e.unhighlight();
                 return;
             }
+            Debug.Log("Entity: " + e.id);
+            e.showStomachFullness();
             e.showBehaviourNet();
             if (highlighted != null) highlighted.unhighlight();
             highlighted = e;
             e.highlight();
+        }
+    }
+
+    void hunger() {
+        foreach(Behaviourable e in behaviourables) {
+            e.hunger();
+        }
+    }
+
+    void grow() {
+        Plant p = new Plant();
+        entities.Add(p);
+        plants.Add(p);
+        p.setRandPos();
+        numPlants++;
+        numEntities++;
+    }
+
+    void eatPlants() {
+        List<Entity> toDie = new List<Entity>();
+        foreach(Plant p in plants) {
+            Collider2D c = p.getTouchingBehaviourable();
+            if (c != null) {
+                toDie.Add(p);
+                Behaviourable b = behaviourables.Find(x => x.entityGameObject == c.gameObject);
+                b.eat();
+            }
+        }
+        foreach(Entity e in toDie) {
+            kill(e);
         }
     }
 
@@ -175,20 +223,29 @@ public class main : MonoBehaviour
     }
 
     void mutate() {
-        if (numCreatures == 0) return;
-        int r = Random.Range(0,numCreatures);
-        behaviourables[r].mutate();
+        foreach (Behaviourable b in behaviourables) {
+            if (Random.value < mutChance) b.mutate();
+        }
     }
 
     void nextGen() {
-        deleteTouching();
-        multiply();
+        multiplyEach();
+    }
+
+    void killStarved() {
+        List<Entity> toDie = new List<Entity>();
+        foreach(Behaviourable e in behaviourables) {
+            if (e.stomachFullness <= 0) toDie.Add(e);
+        }
+        foreach(Entity e in toDie) {
+            kill(e);
+        }
     }
 
     void deleteTouching() {
         List<Entity> toDie = new List<Entity>();
         foreach(Behaviourable e in behaviourables) {
-            if (e.isTouching()) toDie.Add(e);
+            if (e.isTouchingBehaviourable()) toDie.Add(e);
         }
         foreach(Entity e in toDie) {
             kill(e);
@@ -202,7 +259,7 @@ public class main : MonoBehaviour
         }
     }
 
-    void multiply() {
+    void multiplyAny() {
         if (numCreatures == 0) return;
         while (numCreatures < maxCreatures) {
             int r = Random.Range(0,numCreatures);
@@ -217,13 +274,32 @@ public class main : MonoBehaviour
         }
     }
 
+    void multiplyEach() {
+        if (numCreatures == 0) return;
+        List<Behaviourable>
+        foreach (Behaviourable b in behaviourables) {
+            Behaviourable newE = new Creature1();
+            newE.behaviour = (b).behaviour.clone();
+            entities.Add(newE);
+            behaviourables.Add(newE);
+            newE.setRandPos();
+            numEntities++;
+            numCreatures++;
+        }
+    }
+
     void kill(Entity e) {
         Destroy(e.entityGameObject);
+        if (e is Behaviourable) {
+            behaviourables.Remove((Behaviourable)e);
+            numCreatures--;
+        } else if (e is Plant) {
+            plants.Remove((Plant)e);
+            numPlants--;
+        }
         entities.Remove(e);
-        behaviourables.Remove((Behaviourable)e);
         if (highlighted == e) highlighted = null;
         numEntities--;
-        numCreatures--;
     }
 }
 
