@@ -7,7 +7,7 @@ public abstract class Behaviourable : Entity {
     public Actions nextAction;
 
     public int stomachFullness;
-    public static int hungerRate;
+    public int hungerRate;
 
     public Behaviourable() {
         behaviour = new Net(5,1);

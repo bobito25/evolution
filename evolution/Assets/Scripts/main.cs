@@ -40,6 +40,7 @@ public class main : MonoBehaviour
     public bool run;
 
     public float mutChance;
+    public float multiplyChance;
 
     void Awake()
     {
@@ -52,41 +53,48 @@ public class main : MonoBehaviour
         initEntities();
         fixCameraSize();
         mutChance = 0.05f;
+        multiplyChance = 0.01f;
     }
 
     // Start is called before the first frame update
     void Start()
     {
         spawnEntities();
-        run = true;
+        run = false;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButtonDown(0)) {
-            checkHighlight();
-        }
-        eatPlants();
+        if (Input.GetMouseButtonDown(0)) checkHighlight();
+        if (Input.GetKeyDown("space")) run = !run;
     }
 
     void FixedUpdate()
     {
         if (run) {
-            doBehaviour();
-            killStarved();
-            if (time % 10 == 0) {
-                hunger();
+            List<Entity> toDie = new List<Entity>();
+            List<Entity> toClone = new List<Entity>();
+
+            foreach(Behaviourable b in behaviourables) {
+                doBehaviour(b);
+                killStarved(b, toDie);
+                if (time % 10 == 0) {
+                    b.hunger();
+                }
+                if (time % 20 == 0) {
+                    if (Random.value < mutChance) b.mutate();
+                    if (Random.value < multiplyChance && b.stomachFullness > 100) toClone.Add(b);
+                }
             }
-            if (time % 20 == 0) {
-                mutate();
-            }
-            if (time % 100 == 0) {
-                grow();
-            }
-            if (time % 1000 == 0) {
-                nextGen();
-            }
+
+            foreach(Plant p in plants) checkEatPlant(p, toDie);
+            
+            if (time % 100 == 0) grow();
+
+            foreach(Entity e in toDie) kill(e);
+            foreach(Entity e in toClone) clone((Behaviourable)e);
+
             checkAllDead();
             time++;
         }
@@ -120,10 +128,10 @@ public class main : MonoBehaviour
     void spawnPlants() {
         numPlants = 0;
         for (int i = 0; i < maxPlants; i++) {
-            Plant p = new Plant();
-            entities.Add(p);
-            plants.Add(p);
+            Entity p = new Plant();
             p.setRandPos();
+            entities.Add(p);
+            plants.Add((Plant)p);
             numPlants++;
             numEntities++;
         }
@@ -182,6 +190,15 @@ public class main : MonoBehaviour
         numEntities++;
     }
 
+    void checkEatPlant(Plant p, List<Entity> toDie) {
+        Collider2D c = p.getTouchingBehaviourable();
+        if (c != null) {
+            toDie.Add(p);
+            Behaviourable b = behaviourables.Find(x => x.entityGameObject == c.gameObject);
+            b.eat();
+        }
+    }
+
     void eatPlants() {
         List<Entity> toDie = new List<Entity>();
         foreach(Plant p in plants) {
@@ -195,6 +212,13 @@ public class main : MonoBehaviour
         foreach(Entity e in toDie) {
             kill(e);
         }
+    }
+
+    void doBehaviour(Behaviourable b) {
+        b.setInput();
+        b.calcBehaviour();
+        b.move();
+        b.checkBoundaries();
     }
 
     void doBehaviour() {
@@ -229,7 +253,11 @@ public class main : MonoBehaviour
     }
 
     void nextGen() {
-        multiplyEach();
+        
+    }
+
+    void killStarved(Behaviourable b, List<Entity> toDie) {
+        if (b.stomachFullness <= 0) toDie.Add(b);
     }
 
     void killStarved() {
@@ -274,10 +302,19 @@ public class main : MonoBehaviour
         }
     }
 
-    void multiplyEach() {
+    void clone(Behaviourable b) {
+        Behaviourable newE = new Creature1();
+        newE.behaviour = (b).behaviour.clone();
+        entities.Add(newE);
+        behaviourables.Add(newE);
+        newE.setRandPos();
+        numEntities++;
+        numCreatures++;
+    }
+
+    void multiplyEach(List<Behaviourable> bs) {
         if (numCreatures == 0) return;
-        List<Behaviourable>
-        foreach (Behaviourable b in behaviourables) {
+        foreach (Behaviourable b in bs) {
             Behaviourable newE = new Creature1();
             newE.behaviour = (b).behaviour.clone();
             entities.Add(newE);

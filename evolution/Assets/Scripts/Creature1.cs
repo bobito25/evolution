@@ -14,10 +14,10 @@ public class Creature1 : Behaviourable
         entityGameObject.SetActive(true);
         stomachFullness = 300;
         entityGameObject.layer = 10;
+        hungerRate = Random.Range(1,3);
     }
     
     public static void initEntity() {
-        hungerRate = 1;
         Color[] colorArray = new Color[tex.GetPixels().Length];
         for (int i = 0; i < colorArray.Length; i++) {
             colorArray[i] = Color.red;
