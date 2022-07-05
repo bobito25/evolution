@@ -2,6 +2,7 @@ using static System.Array;
 using static System.Math;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,7 +53,7 @@ public class main : MonoBehaviour
         makeBackground();
         initEntities();
         fixCameraSize();
-        mutChance = 0.05f;
+        mutChance = 0.02f;
         multiplyChance = 0.01f;
     }
 
@@ -343,3 +344,6 @@ public class main : MonoBehaviour
 
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//longest time before extinction: 616761 (equal to: ~6167 seconds or ~102 minutes or ~1.7 hours)
