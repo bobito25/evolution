@@ -48,6 +48,10 @@ public abstract class Entity
     public void setRandPos() {
         entityGameObject.transform.position = new Vector3(Random.Range(-GlobalVars.backgroundWidth/2,GlobalVars.backgroundWidth/2),Random.Range(-GlobalVars.backgroundHeight/2,GlobalVars.backgroundHeight/2),0);
     }
+
+    public void setPos(float x, float y) {
+        entityGameObject.transform.position = new Vector3(x,y,0);
+    }
     
     public void checkBoundaries() {
         Rect b = new Rect(-GlobalVars.backgroundWidth/2,-GlobalVars.backgroundHeight/2,GlobalVars.backgroundWidth,GlobalVars.backgroundHeight);

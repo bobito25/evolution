@@ -3,6 +3,8 @@ using static System.Math;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System;
+using System.Globalization;
 using UnityEngine;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -23,6 +25,8 @@ using UnityEngine;
 
 public class main : MonoBehaviour
 {
+    int sessionID;
+
     List<Entity> entities;
     int numEntities;
     int maxEntities;
@@ -55,6 +59,7 @@ public class main : MonoBehaviour
         fixCameraSize();
         mutChance = 0.02f;
         multiplyChance = 0.01f;
+        sessionID = UnityEngine.Random.Range(1000,9999);
     }
 
     // Start is called before the first frame update
@@ -69,6 +74,7 @@ public class main : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0)) checkHighlight();
         if (Input.GetKeyDown("space")) run = !run;
+        if (Input.GetKeyDown("s")) save();
     }
 
     void FixedUpdate()
@@ -84,8 +90,8 @@ public class main : MonoBehaviour
                     b.hunger();
                 }
                 if (time % 20 == 0) {
-                    if (Random.value < mutChance) b.mutate();
-                    if (Random.value < multiplyChance && b.stomachFullness > 100) toClone.Add(b);
+                    if (UnityEngine.Random.value < mutChance) b.mutate();
+                    if (UnityEngine.Random.value < multiplyChance && b.stomachFullness > 100) toClone.Add(b);
                 }
             }
 
@@ -249,7 +255,7 @@ public class main : MonoBehaviour
 
     void mutate() {
         foreach (Behaviourable b in behaviourables) {
-            if (Random.value < mutChance) b.mutate();
+            if (UnityEngine.Random.value < mutChance) b.mutate();
         }
     }
 
@@ -291,7 +297,7 @@ public class main : MonoBehaviour
     void multiplyAny() {
         if (numCreatures == 0) return;
         while (numCreatures < maxCreatures) {
-            int r = Random.Range(0,numCreatures);
+            int r = UnityEngine.Random.Range(0,numCreatures);
             Entity e = behaviourables[r];
             Entity newE = new Creature1();
             ((Behaviourable)newE).behaviour = ((Behaviourable)e).behaviour.clone();
@@ -339,9 +345,102 @@ public class main : MonoBehaviour
         if (highlighted == e) highlighted = null;
         numEntities--;
     }
+
+    void save() {
+        string contents = "";
+        List<string> toAdd = new List<string>();
+        toAdd.Add(sessionID.ToString());
+        toAdd.Add(time.ToString());
+        toAdd.Add(mutChance.ToString("0.00"));
+        toAdd.Add(multiplyChance.ToString("0.00"));
+        toAdd.Add(maxEntities.ToString());
+        toAdd.Add(maxCreatures.ToString());
+        toAdd.Add(maxPlants.ToString());
+        toAdd.Add("\nb:");
+        foreach (Behaviourable b in behaviourables) toAdd.Add(b.ToString());
+        toAdd.Add("p:");
+        foreach (Plant p in plants) toAdd.Add(p.ToString());
+        foreach (string s in toAdd) contents += s + "\n";
+        var culture = new CultureInfo("de-DE");
+        DateTime localDate = DateTime.Now;
+        string date = localDate.ToString(culture);
+        string noColons = date.Replace(':',';');
+        string name = sessionID.ToString() + " - " + noColons;
+        WriteString(name, contents);
+        Debug.Log("saved game state at time: " + time);
+    }
+
+    void load(string contents) {
+        string[] c = contents.Split('\n');
+        sessionID = Int32.Parse(c[0]);
+        time = Int32.Parse(c[1]);
+        mutChance = Int32.Parse(c[2]);
+        multiplyChance = Int32.Parse(c[3]);
+        maxEntities = Int32.Parse(c[4]);
+        maxCreatures = Int32.Parse(c[5]);
+        maxPlants = Int32.Parse(c[6]);
+        int i = 9;
+        while (c[i] != "p:") {
+            string[] b = new string[7];
+            Array.Copy(c,i,b,0,7);
+            loadBehaviourable(b);
+            i += 2;
+        }
+        i++;
+        while (i < c.Length) {
+            string[] p = new string[3];
+            Array.Copy(c,i,p,0,3);
+            loadPlant(p);
+            i += 2;
+        }
+    }
+
+    void loadBehaviourable(string[] b) {
+        Entity e = new Creature1();
+        e.id = Int32.Parse(b[0]);
+        e.setPos(float.Parse(b[1],CultureInfo.InvariantCulture.NumberFormat),float.Parse(b[2],CultureInfo.InvariantCulture.NumberFormat));
+        ((Behaviourable)e).stomachFullness = Int32.Parse(b[3]);
+        ((Behaviourable)e).hungerRate = Int32.Parse(b[4]);
+        string[] linkStrings = b[6].Remove(b[6].Length-1).Split(" ");
+        int[] links = new int[linkStrings.Length];
+        for (int i = 0; i < linkStrings.Length; i++) links[i] = Int32.Parse(linkStrings[i]);
+        ((Behaviourable)e).behaviour = new Net(Int32.Parse(b[5]),links);
+        entities.Add(e);
+        behaviourables.Add((Behaviourable)e);
+        numCreatures++;
+        numEntities++;
+    }
+
+    void loadPlant(string[] p) {
+        Entity e = new Plant();
+        e.id = Int32.Parse(p[0]);
+        e.setPos(float.Parse(p[1],CultureInfo.InvariantCulture.NumberFormat),float.Parse(p[2],CultureInfo.InvariantCulture.NumberFormat));
+        entities.Add(e);
+        plants.Add((Plant)e);
+        numPlants++;
+        numEntities++;
+    }
+
+    public static void WriteString(string name, string contents) {
+        string path = Application.persistentDataPath + "/" + name + ".txt";
+        StreamWriter writer = new StreamWriter(path, true);
+        writer.WriteLine(contents);
+        writer.Close();
+    }
+
+    public static string ReadString(string name) {
+        string path = Application.persistentDataPath + "/" + name + ".txt";
+        StreamReader reader = new StreamReader(path);
+        string r =  reader.ReadToEnd();
+        reader.Close();
+        Debug.Log("loaded game state");
+        return r;
+    }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// path to saves: C:/Users/Leon/AppData/LocalLow/DefaultCompany/evolution
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////

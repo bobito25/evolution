@@ -45,7 +45,7 @@ public class Net
         outputNum = possibleOutputs.Length;
 
         possibleLinks = inputNum*(outputNum+hiddenNum)+(hiddenNum*outputNum);
-        if (tL > possibleLinks) {
+        if (linksAtStart > possibleLinks) {
             Debug.Log("error: links per net higher than possible link amount (funct Net)");
         } 
 
@@ -55,8 +55,39 @@ public class Net
         hidden = new Node[hiddenNum];
         output = new Node[outputNum];
 
-        for (int i = 0; i < tL; i++) {
+        for (int i = 0; i < linksAtStart; i++) {
             addRandomLink();
+        }
+    }
+
+    public Net(int nH, int[] ls) { //max links and num hidden
+        linkNum = 0;
+        linksAtStart = ls.Length;
+        links = new List<Link>();
+        possibleInputs = new string[] {"constant","random","seeEntity"};
+        possibleHiddens = new string[nH];
+        for (int i = 0; i < nH; i++) {
+            possibleHiddens[i] = "hidden";
+        }
+        possibleOutputs = new string[] {"moveForward","rotateLeft"};
+        
+        inputNum = possibleInputs.Length;
+        hiddenNum = possibleHiddens.Length;
+        outputNum = possibleOutputs.Length;
+
+        possibleLinks = inputNum*(outputNum+hiddenNum)+(hiddenNum*outputNum);
+        if (linksAtStart > possibleLinks) {
+            Debug.Log("error: links per net higher than possible link amount (funct Net)");
+        } 
+
+        adj = new bool[inputNum+hiddenNum,outputNum+hiddenNum];
+
+        input = new Node[inputNum];
+        hidden = new Node[hiddenNum];
+        output = new Node[outputNum];
+
+        for (int i = 0; i < linksAtStart; i++) {
+            addLink(ls[i]);
         }
     }
 
@@ -259,6 +290,15 @@ public class Net
         bool r = false;
         for (int i = 0; i < outputNum+hiddenNum; i++) {
             if (adj[i,index]) r = true;
+        }
+        return r;
+    }
+
+    public override string ToString() {
+        string r = "";
+        r += hiddenNum.ToString() + "\n";
+        foreach (Link l in links) {
+            r += l.index.ToString() + " ";
         }
         return r;
     }

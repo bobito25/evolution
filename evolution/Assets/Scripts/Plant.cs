@@ -35,5 +35,15 @@ public class Plant : Entity {
 
     public static GameObject cloneGameObject() {
         return Object.Instantiate(firstGameObject,new Vector3(0, 0, 0), Quaternion.identity);
-    } 
+    }
+
+    public override string ToString() {
+        string r = "";
+        List<string> toAdd = new List<string>();
+        toAdd.Add(id.ToString());
+        toAdd.Add(entityGameObject.transform.position.x.ToString("0.00"));
+        toAdd.Add(entityGameObject.transform.position.y.ToString("0.00"));
+        foreach (string s in toAdd) r += s + "\n";
+        return r;
+    }
 }

@@ -25,6 +25,19 @@ public abstract class Behaviourable : Entity {
         if (stomachFullness > 0) stomachFullness -= hungerRate;
     }
 
+    public override string ToString() {
+        string r = "";
+        List<string> toAdd = new List<string>();
+        toAdd.Add(id.ToString());
+        toAdd.Add(entityGameObject.transform.position.x.ToString("0.00"));
+        toAdd.Add(entityGameObject.transform.position.y.ToString("0.00"));
+        toAdd.Add(stomachFullness.ToString());
+        toAdd.Add(hungerRate.ToString());
+        toAdd.Add(behaviour.ToString());
+        foreach (string s in toAdd) r += s + "\n";
+        return r;
+    }
+
     public abstract void mutate();
     public abstract void highlight();
     public abstract void unhighlight();
