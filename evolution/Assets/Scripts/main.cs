@@ -11,12 +11,6 @@ using UnityEngine;
 
 // TODOs:
 
-//  make game states saveable
-
-//  change evo pressure: add food, hunger, seeFood input
-
-//  change weights to be less random values? -> example: only mutiples of 0.5 between -2 and 2
-
 //  gamespeed slider
 
 //  visualize behaviour nets
@@ -442,6 +436,7 @@ public class main : MonoBehaviour
 
 // path to saves: C:/Users/Leon/AppData/LocalLow/DefaultCompany/evolution
 
+//path laptop: C:\Users\Huawei\AppData\LocalLow\DefaultCompany\evolution
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
